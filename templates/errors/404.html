@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}404 — Page Not Found — Predictions League{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center text-center" style="min-height: 50vh; gap: 1rem;">
+  <div style="font-family: 'Barlow Condensed', sans-serif; font-size: 6rem; font-weight: 800; color: var(--gold); line-height: 1;">404</div>
+  <h1 style="font-family: 'Barlow Condensed', sans-serif; font-size: 1.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Page Not Found</h1>
+  <p style="color: var(--text-muted); max-width: 360px; margin: 0;">That page doesn't exist — maybe the URL is wrong or the player/gameweek was removed.</p>
+  <a href="/" class="btn btn-sm mt-2" style="background: var(--gold); color: var(--navy); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 0.45rem 1.25rem;">Back to Home</a>
+</div>
+{% endblock %}

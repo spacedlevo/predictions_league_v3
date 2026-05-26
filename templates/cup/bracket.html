@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Cup Competition — Predictions League{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cup-round-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+  }
+  .cup-round-card.active-round {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold);
+  }
+  .cup-round-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    background: var(--navy-light);
+    border-bottom: 1px solid var(--border);
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .cup-round-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+  .cup-round-gw {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  /* Match row */
+  .cup-match {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    gap: 0.5rem;
+    min-height: 3rem;
+  }
+  .cup-match:last-child { border-bottom: none; }
+
+  .cup-player {
+    flex: 1;
+    font-size: 0.92rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cup-player.p1 { text-align: right; }
+  .cup-player.p2 { text-align: left; }
+  .cup-player.winner {
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .cup-player.loser {
+    opacity: 0.45;
+  }
+  .cup-player.tbd {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .cup-score {
+    flex: 0 0 auto;
+    min-width: 80px;
+    text-align: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+  }
+  .cup-score .pts {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .cup-score .pts.winner-pts { color: var(--gold); }
+  .cup-score .sep {
+    color: var(--text-muted);
+    margin: 0 2px;
+  }
+  .cup-score.pending {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+  .cup-score.bye-label {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .cup-seed {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    min-width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* Tiebreak details (shown on complete matches) */
+  .cup-tiebreak {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+    flex: 0 0 auto;
+    min-width: 80px;
+    line-height: 1.4;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-0 mb-3">
+  <div class="col">
+    <h1 class="section-header">Cup Competition</h1>
+    {% if season %}<p class="text-muted small mb-0">{{ season }} Season</p>{% endif %}
+  </div>
+</div>
+
+{% if not config %}
+  <div class="panel p-4 text-center">
+    <p class="mb-1" style="color: var(--text-muted);">The cup competition hasn't been set up for this season yet.</p>
+    <p class="mb-0 small" style="color: var(--text-muted);">Run <code>generate_cup_bracket.py</code> to generate the bracket.</p>
+  </div>
+{% else %}
+
+  {# Summary strip #}
+  <div class="panel mb-3 px-3 py-2 d-flex flex-wrap gap-3 align-items-center" style="font-size:0.85rem; color: var(--text-muted);">
+    <span><strong style="color:var(--white);">{{ config.num_rounds }}</strong> rounds</span>
+    <span style="color:var(--border);">|</span>
+    <span>GW<strong style="color:var(--white);">{{ config.start_gameweek }}</strong> – GW<strong style="color:var(--white);">38</strong></span>
+    <span style="color:var(--border);">|</span>
+    <span>Draw generated {{ config.generated_at[:10] }}</span>
+  </div>
+
+  {% for round in rounds %}
+    {% set is_live = round.status == 'live' %}
+    {% set is_done = round.status == 'done' %}
+    <div class="cup-round-card{% if is_live %} active-round{% endif %}">
+      <div class="cup-round-header">
+        <span class="cup-round-title">{{ round.name }}</span>
+        <span class="cup-round-gw">GW {{ round.gameweek }}</span>
+        {% if is_live %}
+          <span class="badge" style="background:var(--gold);color:var(--navy);font-size:0.7rem;">LIVE</span>
+        {% elif is_done %}
+          <span class="badge" style="background:var(--navy);color:var(--text-muted);border:1px solid var(--border);font-size:0.7rem;">Done</span>
+        {% else %}
+          <span class="badge" style="background:var(--navy);color:var(--text-muted);border:1px solid var(--border);font-size:0.7rem;">Upcoming</span>
+        {% endif %}
+      </div>
+
+      {% for match in round.matches %}
+        {% set p1_won = match.winner_id and match.winner_id == match.player1_id %}
+        {% set p2_won = match.winner_id and match.winner_id == match.player2_id %}
+        {% set decided = match.status in ('complete', 'bye') %}
+
+        <div class="cup-match">
+
+          {# Seed — Player 1 side #}
+          {% if match.player1_seed %}
+            <span class="cup-seed">{{ match.player1_seed }}</span>
+          {% else %}
+            <span class="cup-seed"></span>
+          {% endif %}
+
+          {# Player 1 name #}
+          <span class="cup-player p1
+            {%- if decided and p1_won %} winner
+            {%- elif decided and not p1_won %} loser
+            {%- elif not match.player1_id %} tbd
+            {%- endif %}">
+            {% if match.player1_id %}
+              {{ match.player1_web_name or match.player1_name }}
+            {% else %}
+              TBD
+            {% endif %}
+          </span>
+
+          {# Score / centre column #}
+          {% if match.status == 'bye' %}
+            <div class="cup-score bye-label">bye</div>
+
+          {% elif match.status == 'complete' and match.player1_stats and match.player2_stats %}
+            <div class="cup-score">
+              <span class="pts{% if p1_won %} winner-pts{% endif %}">{{ match.player1_stats.points }}</span>
+              <span class="sep">–</span>
+              <span class="pts{% if p2_won %} winner-pts{% endif %}">{{ match.player2_stats.points }}</span>
+            </div>
+
+          {% elif match.status in ('live', 'upcoming') %}
+            <div class="cup-score pending">GW {{ match.gameweek }}</div>
+
+          {% else %}
+            <div class="cup-score pending">–</div>
+          {% endif %}
+
+          {# Player 2 name #}
+          <span class="cup-player p2
+            {%- if decided and p2_won %} winner
+            {%- elif decided and not p2_won %} loser
+            {%- elif not match.player2_id %} tbd
+            {%- endif %}">
+            {% if match.status == 'bye' %}
+              <span style="color:var(--text-muted); font-style:italic; font-size:0.82rem;">bye</span>
+            {% elif match.player2_id %}
+              {{ match.player2_web_name or match.player2_name }}
+            {% else %}
+              TBD
+            {% endif %}
+          </span>
+
+          {# Seed — Player 2 side #}
+          {% if match.player2_seed %}
+            <span class="cup-seed">{{ match.player2_seed }}</span>
+          {% else %}
+            <span class="cup-seed"></span>
+          {% endif %}
+
+        </div>{# /cup-match #}
+
+        {# Tiebreak detail row — only when a tiebreak was needed (scores equal but winner known) #}
+        {% if match.status == 'complete' and match.player1_stats and match.player2_stats
+             and match.player1_stats.points == match.player2_stats.points and match.winner_id %}
+          <div class="px-3 pb-2" style="font-size:0.75rem; color:var(--text-muted); border-bottom: 1px solid var(--border);">
+            <span style="margin-right:0.5rem;">Tiebreak:</span>
+            <span>Results {{ match.player1_stats.correct_results }}–{{ match.player2_stats.correct_results }}</span>
+            <span style="margin:0 0.35rem; color:var(--border);">·</span>
+            <span>Exact {{ match.player1_stats.correct_scores }}–{{ match.player2_stats.correct_scores }}</span>
+            <span style="margin:0 0.35rem; color:var(--border);">·</span>
+            <span>Variance {{ match.player1_stats.goals_variance }}–{{ match.player2_stats.goals_variance }}</span>
+          </div>
+        {% endif %}
+
+      {% endfor %}
+    </div>{# /cup-round-card #}
+  {% endfor %}
+
+  {# Legend #}
+  <div class="panel px-3 py-2 mt-2" style="font-size: 0.8rem; color: var(--text-muted);">
+    <strong style="color:var(--gold);">Scoring:</strong>
+    2 pts exact score &nbsp;·&nbsp; 1 pt correct result (H/D/A) &nbsp;·&nbsp;
+    Tiebreak: results &rarr; exact scores &rarr; goals variance &rarr; seeding
+  </div>
+
+{% endif %}
+{% endblock %}

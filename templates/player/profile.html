@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}{{ player.web_name | title }} — Predictions League{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Points badge */
+  .pts-badge {
+    display: inline-block;
+    min-width: 28px;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  .pts-2  { background: rgba(74,222,128,0.18); color: #4ade80; }
+  .pts-1  { background: rgba(240,180,41,0.18);  color: var(--gold); }
+  .pts-0  { background: rgba(232,93,93,0.14);   color: #e85d5d; }
+
+  /* Score display inside history */
+  .score-pill {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    min-width: 44px;
+    text-align: center;
+  }
+  .score-pill.actual { color: var(--gold); }
+  .score-pill.pred   { color: var(--silver); }
+
+  /* Predicted table */
+  .pred-table th, .pred-table td {
+    padding: 0.5rem 0.6rem;
+  }
+  .pred-table .col-num {
+    width: 42px;
+    text-align: center;
+  }
+
+  /* Team name contrast */
+  .pred-table td.team-name {
+    color: var(--white);
+    font-weight: 600;
+  }
+  .hist-teams {
+    color: var(--white);
+    font-weight: 600;
+  }
+
+  /* History fixture label */
+  .hist-teams {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: normal;   /* allow wrapping inside fixture cell */
+  }
+  .hist-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ── Accordion dark-theme overrides ── */
+  .history-accordion .accordion-item {
+    background: var(--navy-mid) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+  }
+  .history-accordion .accordion-button {
+    background: var(--navy-mid) !important;
+    color: var(--white) !important;
+    box-shadow: none !important;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 0.85rem 1rem;
+  }
+  .history-accordion .accordion-button:not(.collapsed) {
+    color: var(--gold) !important;
+    border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0 !important;
+  }
+  .history-accordion .accordion-button:focus {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  /* Replace default dark chevron with a light muted one */
+  .history-accordion .accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%238a9bb0'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+  }
+  /* Gold chevron (rotated up) when expanded */
+  .history-accordion .accordion-button:not(.collapsed)::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23f0b429'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+  }
+  .history-accordion .accordion-body {
+    padding: 0;
+    background: var(--navy-mid);
+  }
+  /* Fixture col wraps; score/pts cols stay fixed */
+  .hist-inner-table {
+    min-width: 420px;
+  }
+  .hist-inner-table td.hist-fixture-cell {
+    white-space: normal;
+    min-width: 110px;
+  }
+  .hist-inner-table td, .hist-inner-table th {
+    padding: 0.55rem 0.75rem;
+  }
+  /* Summary chip in accordion header */
+  .gw-summary {
+    margin-left: auto;
+    padding-right: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .accordion-button:not(.collapsed) .gw-summary {
+    color: var(--gold-dim);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page heading -->
+<div class="mb-4">
+  <a href="{{ url_for('home.index') }}" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;margin-bottom:0.5rem;">
+    &larr; Standings
+  </a>
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">
+    Player Profile &mdash; {{ season }}
+  </p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;line-height:1;">
+    {{ player.web_name | title }}
+  </h1>
+</div>
+
+<!-- ── Stats Bar ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-3">
+    <div class="panel text-center py-3">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:var(--gold);">
+        {{ stats.total_points }}
+      </div>
+      <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-top:0.25rem;">
+        Total Points
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="panel text-center py-3">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:#4ade80;">
+        {{ stats.correct_scores }}
+      </div>
+      <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-top:0.25rem;">
+        Correct Scores
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="panel text-center py-3">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:var(--silver);">
+        {{ stats.correct_results }}
+      </div>
+      <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-top:0.25rem;">
+        Correct Results
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-3">
+    <div class="panel text-center py-3">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;line-height:1;color:var(--white);">
+        {{ stats.avg_ppg if stats.avg_ppg is not none else '—' }}
+      </div>
+      <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-top:0.25rem;">
+        Avg pts / GW
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Predicted Premier League Table ── -->
+  <div class="col-12 col-xl-6">
+    <p class="section-header">Predicted Table</p>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="pl-table pred-table">
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th>Team</th>
+              <th class="col-num d-none d-sm-table-cell">P</th>
+              <th class="col-num">W</th>
+              <th class="col-num">D</th>
+              <th class="col-num d-none d-sm-table-cell">L</th>
+              <th class="col-num d-none d-sm-table-cell">GF</th>
+              <th class="col-num d-none d-sm-table-cell">GA</th>
+              <th class="col-num">GD</th>
+              <th class="col-num">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in predicted_table %}
+            <tr style="cursor:default;">
+              <td class="col-num">
+                <span class="rank-badge {% if row.position <= 3 %}rank-{{ row.position }}{% else %}rank-n{% endif %}">
+                  {{ row.position }}
+                </span>
+              </td>
+              <td class="team-name" style="font-weight:500;">{{ row.team_name | title }}</td>
+              <td class="text-center d-none d-sm-table-cell" style="color:var(--text-muted);">{{ row.P }}</td>
+              <td class="text-center" style="color:var(--silver);">{{ row.W }}</td>
+              <td class="text-center" style="color:var(--text-muted);">{{ row.D }}</td>
+              <td class="text-center d-none d-sm-table-cell" style="color:var(--text-muted);">{{ row.L }}</td>
+              <td class="text-center d-none d-sm-table-cell" style="color:var(--silver);">{{ row.GF }}</td>
+              <td class="text-center d-none d-sm-table-cell" style="color:var(--text-muted);">{{ row.GA }}</td>
+              <td class="text-center" style="color:var(--silver);">
+                {% if row.GD > 0 %}+{{ row.GD }}{% else %}{{ row.GD }}{% endif %}
+              </td>
+              <td class="text-center pts-cell">{{ row.Pts }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" class="text-center py-4" style="color:var(--text-muted);">
+                No predictions yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prediction History ── -->
+  <div class="col-12 col-xl-6">
+    <p class="section-header">Prediction History</p>
+
+    {% if history_by_gw %}
+    <div class="accordion history-accordion" id="historyAccordion">
+      {% for gw_num, gw_data in history_by_gw %}
+      {% set loop_id = "gw-" ~ gw_num %}
+      {% set is_first = loop.first %}
+      <div class="accordion-item">
+
+        <!-- Header -->
+        <h2 class="accordion-header" id="heading-{{ loop_id }}">
+          <button class="accordion-button {% if not is_first %}collapsed{% endif %}"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#collapse-{{ loop_id }}"
+                  aria-expanded="{{ 'true' if is_first else 'false' }}"
+                  aria-controls="collapse-{{ loop_id }}">
+            Gameweek {{ gw_num }}
+            <span class="gw-summary">
+              {% if gw_data.finished_count > 0 %}
+                {{ gw_data.total_pts }} pts
+                &middot; {{ gw_data.fixtures | length }} fixtures
+              {% else %}
+                {{ gw_data.fixtures | length }} fixtures
+              {% endif %}
+            </span>
+          </button>
+        </h2>
+
+        <!-- Body -->
+        <div id="collapse-{{ loop_id }}"
+             class="accordion-collapse collapse {% if is_first %}show{% endif %}"
+             aria-labelledby="heading-{{ loop_id }}"
+             data-bs-parent="#historyAccordion">
+          <div class="accordion-body">
+            <div class="table-wrap">
+              <table class="pl-table hist-inner-table">
+                <thead>
+                  <tr>
+                    <th>Fixture</th>
+                    <th class="text-center">Pred</th>
+                    <th class="text-center">Result</th>
+                    <th class="text-center">Pts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for h in gw_data.fixtures %}
+                  <tr style="cursor:default;">
+                    <td class="hist-fixture-cell">
+                      <a href="{{ url_for('gameweek.view', gw_number=gw_num) }}" style="text-decoration:none;">
+                        <div class="hist-teams">
+                          {{ h.home_team | title }} <span style="color:var(--text-muted);font-size:0.8rem;">v</span> {{ h.away_team | title }}
+                        </div>
+                        <div class="hist-date">{{ h.kickoff_dttm | format_kickoff_day }}</div>
+                      </a>
+                    </td>
+
+                    <!-- Prediction -->
+                    <td class="text-center">
+                      {% if h.visible %}
+                        {% if h.placeholder %}
+                          <span style="color:var(--text-muted);font-size:0.8rem;">n/s</span>
+                        {% elif h.points == 2 %}
+                          <span class="score-pill" style="color:#4ade80;">{{ h.pred_home }}–{{ h.pred_away }}</span>
+                        {% elif h.points == 1 %}
+                          <span class="score-pill" style="color:var(--gold);">{{ h.pred_home }}–{{ h.pred_away }}</span>
+                        {% elif h.points == 0 %}
+                          <span class="score-pill" style="color:#e85d5d;">{{ h.pred_home }}–{{ h.pred_away }}</span>
+                        {% else %}
+                          <span class="score-pill" style="color:var(--white);">{{ h.pred_home }}–{{ h.pred_away }}</span>
+                        {% endif %}
+                      {% else %}
+                        <span style="color:var(--text-muted);font-size:0.8rem;">Hidden</span>
+                      {% endif %}
+                    </td>
+
+                    <!-- Result -->
+                    <td class="text-center">
+                      {% if h.result is not none %}
+                        <span class="score-pill" style="color:var(--white);">{{ h.result_home }}–{{ h.result_away }}</span>
+                      {% elif h.finished %}
+                        <span style="color:var(--text-muted);font-size:0.8rem;">—</span>
+                      {% else %}
+                        <span style="color:var(--text-muted);font-size:0.8rem;">{{ h.kickoff_dttm | format_kickoff_time }}</span>
+                      {% endif %}
+                    </td>
+
+                    <!-- Points -->
+                    <td class="text-center">
+                      {% if h.points == 2 %}
+                        <span class="pts-badge pts-2">2</span>
+                      {% elif h.points == 1 %}
+                        <span class="pts-badge pts-1">1</span>
+                      {% elif h.points == 0 %}
+                        <span class="pts-badge pts-0">0</span>
+                      {% else %}
+                        <span style="color:var(--text-muted);font-size:0.8rem;">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="px-3 py-2" style="border-top:1px solid var(--border);text-align:right;">
+              <a href="{{ url_for('gameweek.view', gw_number=gw_num) }}"
+                 style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;letter-spacing:0.5px;">
+                View Gameweek {{ gw_num }} &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="panel">
+      <p class="text-center py-4" style="color:var(--text-muted);margin:0;">No predictions yet.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

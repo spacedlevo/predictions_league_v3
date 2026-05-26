@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  #standings-table thead th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+  }
+  #standings-table thead th[data-sort]:hover {
+    color: var(--white);
+  }
+  #standings-table thead th[data-sort].sorted {
+    color: var(--gold);
+  }
+  .sort-icon {
+    font-size: 0.7rem;
+    margin-left: 3px;
+    opacity: 0.8;
+  }
+  .rank-change {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .rank-up   { color: #22c55e; }
+  .rank-down { color: #ef4444; }
+  .rank-same { color: var(--text-muted); }
+  .live-badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #22c55e;
+    animation: pulse-live 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+</style>
+{% endblock %}
+
+{% block title %}Predictions League — {{ season }}{% endblock %}
+
+{% block content %}
+
+<!-- Page heading -->
+<div class="mb-4">
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">Premier League Predictions</p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;line-height:1;">
+    {{ season }} <span style="color:var(--gold);">Season</span>
+  </h1>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── League Table ── -->
+  <div class="col-12 col-lg-7">
+    <p class="section-header">Standings</p>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="pl-table" id="standings-table">
+          <thead>
+            <tr>
+              <th style="width:36px;" data-sort="num" title="Sort by position">#</th>
+              <th data-sort="alpha">Player</th>
+              <th class="text-center" data-sort="num">Pts</th>
+              <th class="text-center" data-sort="num" title="Correct Results">Results</th>
+              <th class="text-center" data-sort="num" title="Correct Scores">Scores</th>
+              {% if gw_table_gameweek %}
+              <th class="text-center" data-sort="num" title="Points this gameweek">GW{{ gw_table_gameweek }}</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table %}
+            <tr onclick="window.location='/player/{{ row.player_id }}'">
+              <td>
+                {% if row.position == 1 %}
+                  <span class="rank-badge rank-1">1</span>
+                {% elif row.position == 2 %}
+                  <span class="rank-badge rank-2">2</span>
+                {% elif row.position == 3 %}
+                  <span class="rank-badge rank-3">3</span>
+                {% else %}
+                  <span class="rank-badge rank-n">{{ row.position }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-1">
+                  <a class="player-name-link" href="/player/{{ row.player_id }}">
+                    {{ row.web_name | title }}
+                  </a>
+                  {% if is_live_gameweek %}
+                    {% if row.rank_change is none %}
+                      <span class="rank-change rank-up">NEW</span>
+                    {% elif row.rank_change > 0 %}
+                      <span class="rank-change rank-up">▲{{ row.rank_change }}</span>
+                    {% elif row.rank_change < 0 %}
+                      <span class="rank-change rank-down">▼{{ (row.rank_change * -1) }}</span>
+                    {% else %}
+                      <span class="rank-change rank-same">–</span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+              <td class="text-center pts-cell">{{ row.total_points }}</td>
+              <td class="text-center" style="color:var(--silver);">{{ row.correct_results }}</td>
+              <td class="text-center" style="color:var(--silver);">{{ row.correct_scores }}</td>
+              {% if gw_table_gameweek %}
+              <td class="text-center" style="color:var(--gold);">{{ row.gw_points }}</td>
+              {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="{{ 6 if gw_table_gameweek else 5 }}" class="text-center py-4" style="color:var(--text-muted);">
+                No standings available yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Gameweek Fixtures ── -->
+  <div class="col-12 col-lg-5">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+      <p class="section-header mb-0">
+        {% if gameweek %}Gameweek {{ gameweek }}{% else %}Fixtures{% endif %}
+      </p>
+      {% if gameweek %}
+      <a href="/gameweek/{{ gameweek }}"
+         style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">
+        Full details <i class="bi bi-arrow-right"></i>
+      </a>
+      {% endif %}
+    </div>
+    {% if gw_deadline %}
+    <p style="font-size:0.78rem;color:var(--text-muted);margin:0 0 0.5rem;">
+      Deadline: {{ gw_deadline | format_kickoff }}
+    </p>
+    {% endif %}
+    <div class="panel">
+      {% for f in fixtures %}
+      <a href="/fixture/{{ f.fixture_id }}" style="display:block;color:inherit;text-decoration:none;">
+      <div class="fixture-row" style="transition:background 0.12s;" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background=''">
+        <span class="fixture-team home">{{ f.home_team | title}}</span>
+
+        {% if f.finished %}
+          <span class="fixture-score">{{ f.home_goals }} – {{ f.away_goals }}</span>
+        {% elif f.started %}
+          <span class="fixture-score">
+            {% if f.home_goals is not none %}{{ f.home_goals }} – {{ f.away_goals }}{% endif %}
+          </span>
+        {% else %}
+          <span class="fixture-score pending">
+            <span style="display:block;font-size:0.7rem;font-weight:600;letter-spacing:0.5px;">{{ f.kickoff_dttm | format_kickoff_day }}</span>
+            <span style="display:block;font-size:0.85rem;font-weight:700;">{{ f.kickoff_dttm | format_kickoff_time }}</span>
+          </span>
+        {% endif %}
+
+        <span class="fixture-team away">{{ f.away_team | title }}</span>
+
+        <span style="flex:0 0 52px;text-align:right;">
+          {% if f.started and not f.finished %}
+          <span class="live-badge">● LIVE</span>
+          {% endif %}
+        </span>
+      </div>
+      </a>
+      {% else %}
+      <div class="py-4 text-center" style="color:var(--text-muted);font-size:0.9rem;">
+        No fixtures available.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var table = document.getElementById('standings-table');
+  if (!table) return;
+
+  var sortCol = null, sortAsc = true;
+  var headers = Array.from(table.querySelectorAll('thead th[data-sort]'));
+
+  headers.forEach(function (th, idx) {
+    th.addEventListener('click', function () {
+      var defaultAsc = (idx === 0);
+      sortAsc = (sortCol === idx) ? !sortAsc : defaultAsc;
+      sortCol = idx;
+
+      var isNum = th.dataset.sort === 'num';
+      var tbody = table.querySelector('tbody');
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+
+      rows.sort(function (a, b) {
+        var aText = (a.cells[idx] ? a.cells[idx].textContent.trim() : '');
+        var bText = (b.cells[idx] ? b.cells[idx].textContent.trim() : '');
+        if (isNum) {
+          return sortAsc ? (parseFloat(aText) || 0) - (parseFloat(bText) || 0)
+                         : (parseFloat(bText) || 0) - (parseFloat(aText) || 0);
+        }
+        return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+      });
+
+      rows.forEach(function (r) { tbody.appendChild(r); });
+
+      // Update header indicators
+      headers.forEach(function (h) {
+        h.classList.remove('sorted');
+        var icon = h.querySelector('.sort-icon');
+        if (icon) icon.remove();
+      });
+      th.classList.add('sorted');
+      var icon = document.createElement('span');
+      icon.className = 'sort-icon';
+      icon.textContent = sortAsc ? '▲' : '▼';
+      th.appendChild(icon);
+    });
+  });
+})();
+</script>
+{% endblock %}

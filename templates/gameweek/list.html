@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Gameweeks — Predictions League{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">Season Overview</p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;line-height:1;">
+    Gameweeks <span style="color:var(--gold);">{{ season }}</span>
+  </h1>
+</div>
+
+<div class="panel">
+  {% for gw in gameweeks %}
+  <a href="/gameweek/{{ gw.gameweek }}"
+     style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;transition:background 0.12s;"
+     onmouseover="this.style.background='var(--navy-light)'"
+     onmouseout="this.style.background=''">
+
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1.15rem;color:var(--white);min-width:3ch;">
+        GW{{ gw.gameweek }}
+      </span>
+      {% if gw.current_gameweek %}
+        <span style="background:var(--gold);color:var(--navy);font-size:0.7rem;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:3px;">Live</span>
+      {% elif gw.next_gameweek %}
+        <span style="background:var(--navy-light);color:var(--silver);border:1px solid var(--border);font-size:0.7rem;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:3px;">Next</span>
+      {% elif gw.finished %}
+        <span style="background:transparent;color:var(--text-muted);font-size:0.7rem;font-weight:600;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:3px;border:1px solid var(--border);">Done</span>
+      {% else %}
+        <span style="background:transparent;color:var(--text-muted);font-size:0.7rem;font-weight:600;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:3px;border:1px solid var(--border);">Upcoming</span>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span style="font-size:0.82rem;color:var(--text-muted);">
+        {{ gw.deadline_dttm | format_kickoff }}
+      </span>
+      <i class="bi bi-chevron-right" style="color:var(--text-muted);font-size:0.85rem;"></i>
+    </div>
+
+  </a>
+  {% else %}
+  <div class="py-4 text-center" style="color:var(--text-muted);font-size:0.9rem;">
+    No gameweeks available.
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Predictions League{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Google Fonts: Barlow Condensed (headings) + DM Sans (body) -->
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:       #0d1b2a;
+      --navy-mid:   #1a2f4e;
+      --navy-light: #243b55;
+      --gold:       #f0b429;
+      --gold-dim:   #c49020;
+      --silver:     #b0b8c1;
+      --bronze:     #cd7f32;
+      --white:      #ffffff;
+      --off-white:  #f4f6f8;
+      --text-muted: #8a9bb0;
+      --border:     #1e3352;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      background: var(--navy-mid);
+      border-bottom: 3px solid var(--gold);
+      padding: 0.75rem 1rem;
+    }
+    .navbar-brand {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: 0.5px;
+      color: var(--white) !important;
+      text-transform: uppercase;
+    }
+    .navbar-brand span {
+      color: var(--gold);
+    }
+    .navbar-toggler {
+      border-color: var(--navy-light);
+    }
+    .navbar-toggler-icon {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28240,180,41,1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+    .navbar-collapse {
+      margin-top: 0.5rem;
+    }
+    @media (min-width: 576px) {
+      .navbar-collapse { margin-top: 0; }
+    }
+    .nav-link {
+      color: var(--silver) !important;
+      font-weight: 500;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      padding: 0.5rem 1rem !important;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--white) !important;
+      background: var(--navy-light);
+    }
+
+    /* ── Page layout ── */
+    .page-content {
+      padding: 1.25rem 0 3rem;
+    }
+
+    /* ── Section header ── */
+    .section-header {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      border-left: 4px solid var(--gold);
+      padding-left: 0.65rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Cards / panels ── */
+    .panel {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    /* ── Tables ── */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pl-table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+      font-size: 0.9rem;
+    }
+    .pl-table thead tr {
+      background: var(--navy-light);
+    }
+    .pl-table thead th {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .pl-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+      cursor: pointer;
+    }
+    .pl-table tbody tr:hover {
+      background: var(--navy-light);
+    }
+    .pl-table tbody td {
+      padding: 0.65rem 0.9rem;
+      vertical-align: middle;
+    }
+    .pl-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    /* Rank medal */
+    .rank-badge {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+      line-height: 24px;
+    }
+    .rank-1 { background: var(--gold);   color: var(--navy); }
+    .rank-2 { background: var(--silver); color: var(--navy); }
+    .rank-3 { background: var(--bronze); color: var(--white); }
+    .rank-n { background: transparent;  color: var(--text-muted); }
+    /* Points cell emphasis */
+    .pts-cell {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--white);
+    }
+    .player-name-link {
+      color: var(--white);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .player-name-link:hover { color: var(--gold); text-decoration: underline; }
+
+    /* ── Fixture list ── */
+    .fixture-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: 0.5rem;
+    }
+    .fixture-row:last-child { border-bottom: none; }
+    .fixture-team {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .fixture-team.home { text-align: right; }
+    .fixture-team.away { text-align: left; }
+    .fixture-score {
+      flex: 0 0 auto;
+      min-width: 72px;
+      text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+    .fixture-score.pending {
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Scroll fade hint ── */
+    .scroll-shade {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 36px;
+      background: linear-gradient(to left, var(--navy-mid) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.2s;
+      border-radius: 0 6px 6px 0;
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-sm">
+  <div class="container-fluid container-lg">
+    <a class="navbar-brand" href="/">Predictions <span>League</span></a>
+    <button class="navbar-toggler" type="button"
+            data-bs-toggle="collapse" data-bs-target="#mainNav"
+            aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="mainNav">
+      <ul class="navbar-nav gap-1">
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'home.index' %}active{% endif %}"
+             href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.blueprint == 'gameweek' %}active{% endif %}"
+             href="/gameweek/">Gameweeks</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.blueprint == 'cup' %}active{% endif %}"
+             href="/cup/">Cup</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="page-content">
+  <div class="container-lg px-3">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<footer>
+  <div class="container-lg">
+    Predictions League &mdash; {{ season if season is defined else '' }}
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.table-wrap, .grid-wrap').forEach(function (el) {
+    var container = el.parentElement;
+    if (!container) return;
+    var shade = document.createElement('div');
+    shade.className = 'scroll-shade';
+    if (getComputedStyle(container).position === 'static') {
+      container.style.position = 'relative';
+    }
+    container.appendChild(shade);
+    function check() {
+      var canScroll = el.scrollWidth > el.clientWidth + 2;
+      var atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+      shade.style.opacity = (canScroll && !atEnd) ? '1' : '0';
+    }
+    el.addEventListener('scroll', check, { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(check).observe(el);
+    }
+    check();
+  });
+});
+</script>
+</body>
+</html>

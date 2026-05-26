@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+
+{% block title %}{{ fixture.home_team | title }} v {{ fixture.away_team | title }} — GW{{ fixture.gameweek }} — Predictions League{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Fixture hero ── */
+  .fixture-hero {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+  }
+  .hero-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .hero-team {
+    flex: 1;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    max-width: 200px;
+  }
+  .hero-team.home { text-align: right; }
+  .hero-team.away { text-align: left; }
+  .hero-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 2.8rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+    min-width: 110px;
+    line-height: 1;
+  }
+  .hero-score.pending {
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  /* ── Vote distribution ── */
+  .vote-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .vote-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem 0.75rem 0.75rem;
+    text-align: center;
+  }
+  .vote-card.winner {
+    border-color: var(--gold);
+  }
+  .vote-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+  .vote-team {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--silver);
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .vote-count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--white);
+  }
+  .vote-pct {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    margin-bottom: 0.6rem;
+  }
+  .vote-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .vote-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--gold);
+    transition: width 0.4s ease;
+  }
+  .vote-card.home-card .vote-bar-fill { background: #60a5fa; }
+  .vote-card.draw-card .vote-bar-fill { background: var(--silver); }
+  .vote-card.away-card .vote-bar-fill { background: #f87171; }
+
+  .vote-card[data-filter] { cursor: pointer; user-select: none; }
+  .vote-card[data-filter]:hover { border-color: var(--silver); }
+  .vote-card.active-filter { border-color: var(--white) !important; box-shadow: 0 0 0 2px rgba(255,255,255,0.15); }
+  .vote-cards.has-filter .vote-card:not(.active-filter) { opacity: 0.4; }
+  .filter-hint { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; }
+  #pred-table-body tr.filter-hidden { display: none; }
+
+  /* ── Score chart ── */
+  .score-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .score-bar-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    min-width: 42px;
+    text-align: right;
+    color: var(--white);
+  }
+  .score-bar-track {
+    flex: 1;
+    height: 22px;
+    background: var(--navy-light);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    padding-left: 0.5rem;
+    min-width: 22px;
+    transition: width 0.4s ease;
+  }
+  .score-bar-count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--navy);
+    white-space: nowrap;
+  }
+
+  /* ── Player predictions table ── */
+  .pred-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+  }
+  .pred-score.pts-2 { color: #4ade80; }
+  .pred-score.pts-1 { color: var(--gold); }
+  .pred-score.pts-0 { color: #e85d5d; }
+  .pred-score.pts-pending { color: var(--white); }
+
+  .pts-pill {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    min-width: 24px;
+    text-align: center;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+  }
+  .pts-pill.pts-2 { background: rgba(74,222,128,0.18); color: #4ade80; }
+  .pts-pill.pts-1 { background: rgba(240,180,41,0.18);  color: var(--gold); }
+  .pts-pill.pts-0 { background: rgba(232,93,93,0.14);   color: #e85d5d; }
+  .pts-pill.pts-pending { background: var(--navy-light); color: var(--text-muted); }
+
+  .result-badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    min-width: 22px;
+    text-align: center;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+  }
+  .result-H { background: rgba(96,165,250,0.18); color: #60a5fa; }
+  .result-D { background: rgba(176,184,193,0.18); color: var(--silver); }
+  .result-A { background: rgba(248,113,113,0.18); color: #f87171; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb -->
+<nav style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
+  <a href="/gameweek/" style="color:var(--text-muted);text-decoration:none;">Gameweeks</a>
+  <span style="margin:0 0.4rem;">/</span>
+  <a href="/gameweek/{{ fixture.gameweek }}" style="color:var(--text-muted);text-decoration:none;">GW{{ fixture.gameweek }}</a>
+  <span style="margin:0 0.4rem;">/</span>
+  <span style="color:var(--silver);">{{ fixture.home_team | title }} v {{ fixture.away_team | title }}</span>
+</nav>
+
+<!-- Fixture hero -->
+<div class="fixture-hero mb-4">
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.9rem;">
+    {{ season }} &nbsp;&middot;&nbsp; Gameweek {{ fixture.gameweek }}
+    {% if fixture.finished %}
+      &nbsp;<span style="background:var(--navy-light);border:1px solid var(--border);color:var(--silver);font-size:0.68rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:3px;">FT</span>
+    {% elif fixture.started %}
+      &nbsp;<span style="background:var(--gold);color:var(--navy);font-size:0.68rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:3px;">Live</span>
+    {% endif %}
+  </p>
+  <div class="hero-teams">
+    <div class="hero-team home">{{ fixture.home_team | title }}</div>
+
+    {% if fixture.finished %}
+      <div class="hero-score">{{ fixture.home_goals }} – {{ fixture.away_goals }}</div>
+    {% else %}
+      <div class="hero-score pending">
+        <span style="display:block;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;">{{ fixture.kickoff_dttm | format_kickoff_day }}</span>
+        <span style="display:block;font-size:1.5rem;font-weight:700;font-family:'Barlow Condensed',sans-serif;color:var(--silver);">{{ fixture.kickoff_dttm | format_kickoff_time }}</span>
+      </div>
+    {% endif %}
+
+    <div class="hero-team away">{{ fixture.away_team | title }}</div>
+  </div>
+</div>
+
+{% if not visible %}
+<!-- Predictions locked -->
+<div class="panel mb-4" style="padding:1.5rem 1rem;text-align:center;">
+  <i class="bi bi-lock-fill" style="font-size:1.8rem;color:var(--border);display:block;margin-bottom:0.5rem;"></i>
+  <p style="color:var(--text-muted);font-size:0.9rem;margin:0;">
+    Predictions are hidden until this fixture kicks off or all players have submitted.
+  </p>
+</div>
+
+{% else %}
+
+<div class="row g-3">
+
+  <!-- Vote distribution -->
+  <div class="col-12 col-lg-6">
+    <p class="section-header">Result Predictions</p>
+    {% if total_votes == 0 %}
+    <div class="panel" style="padding:1.25rem;text-align:center;color:var(--text-muted);font-size:0.9rem;">
+      No predictions submitted yet.
+    </div>
+    {% else %}
+    {% set h_pct = (vote_counts.H / total_votes * 100) | round | int %}
+    {% set d_pct = (vote_counts.D / total_votes * 100) | round | int %}
+    {% set a_pct = (vote_counts.A / total_votes * 100) | round | int %}
+    {% set max_votes = [vote_counts.H, vote_counts.D, vote_counts.A] | max %}
+    <div class="vote-cards" id="vote-cards">
+      <div class="vote-card home-card {% if vote_counts.H == max_votes and vote_counts.H > 0 %}winner{% endif %}" data-filter="H">
+        <div class="vote-label">Home Win</div>
+        <div class="vote-team" title="{{ fixture.home_team | title }}">{{ fixture.home_team | title }}</div>
+        <div class="vote-count">{{ vote_counts.H }}</div>
+        <div class="vote-pct">{{ h_pct }}%</div>
+        <div class="vote-bar">
+          <div class="vote-bar-fill" style="width:{{ h_pct }}%;"></div>
+        </div>
+      </div>
+      <div class="vote-card draw-card {% if vote_counts.D == max_votes and vote_counts.D > 0 %}winner{% endif %}" data-filter="D">
+        <div class="vote-label">Draw</div>
+        <div class="vote-team">&mdash;</div>
+        <div class="vote-count">{{ vote_counts.D }}</div>
+        <div class="vote-pct">{{ d_pct }}%</div>
+        <div class="vote-bar">
+          <div class="vote-bar-fill" style="width:{{ d_pct }}%;"></div>
+        </div>
+      </div>
+      <div class="vote-card away-card {% if vote_counts.A == max_votes and vote_counts.A > 0 %}winner{% endif %}" data-filter="A">
+        <div class="vote-label">Away Win</div>
+        <div class="vote-team" title="{{ fixture.away_team | title }}">{{ fixture.away_team | title }}</div>
+        <div class="vote-count">{{ vote_counts.A }}</div>
+        <div class="vote-pct">{{ a_pct }}%</div>
+        <div class="vote-bar">
+          <div class="vote-bar-fill" style="width:{{ a_pct }}%;"></div>
+        </div>
+      </div>
+    </div>
+    <p class="filter-hint" id="filter-hint" style="display:none;">Click again to clear filter</p>
+    {% endif %}
+  </div>
+
+  <!-- Popular scores -->
+  <div class="col-12 col-lg-6">
+    <p class="section-header">Most Popular Scores</p>
+    <div class="panel" style="padding:1rem 1rem 0.5rem;">
+      {% if popular_scores %}
+        {% for s in popular_scores %}
+        <div class="score-bar-row">
+          <div class="score-bar-label">{{ s.score }}</div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" style="width:{{ s.pct }}%;">
+              <span class="score-bar-count">{{ s.count }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="color:var(--text-muted);font-size:0.9rem;text-align:center;padding:0.75rem 0;">
+          No predictions yet.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Player predictions table -->
+<div class="mt-4">
+  <p class="section-header">Player Predictions</p>
+  <div class="panel">
+    <div class="table-wrap">
+      <table class="pl-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th class="text-center">Prediction</th>
+            <th class="text-center">Pick</th>
+            <th class="text-center" title="Points earned">Pts</th>
+          </tr>
+        </thead>
+        <tbody id="pred-table-body">
+          {% for row in players_data %}
+          <tr onclick="window.location='/player/{{ row.player_id }}'"
+              data-result="{{ row.predicted_result if row.visible else '' }}">
+            <td>
+              <a class="player-name-link" href="/player/{{ row.player_id }}">{{ row.web_name | title }}</a>
+            </td>
+            {% if row.visible %}
+              <td class="text-center">
+                {% if row.pts == 2 %}
+                  <span class="pred-score pts-2">{{ row.home }}–{{ row.away }}</span>
+                {% elif row.pts == 1 %}
+                  <span class="pred-score pts-1">{{ row.home }}–{{ row.away }}</span>
+                {% elif row.pts == 0 %}
+                  <span class="pred-score pts-0">{{ row.home }}–{{ row.away }}</span>
+                {% else %}
+                  <span class="pred-score pts-pending">{{ row.home }}–{{ row.away }}</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if row.predicted_result == 'H' %}
+                  <span class="result-badge result-H">H</span>
+                {% elif row.predicted_result == 'D' %}
+                  <span class="result-badge result-D">D</span>
+                {% elif row.predicted_result == 'A' %}
+                  <span class="result-badge result-A">A</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if row.pts is not none %}
+                  <span class="pts-pill pts-{{ row.pts }}">{{ row.pts }}</span>
+                {% else %}
+                  <span class="pts-pill pts-pending">–</span>
+                {% endif %}
+              </td>
+            {% else %}
+              <td class="text-center" colspan="3" style="color:var(--border);font-size:0.85rem;">
+                <i class="bi bi-lock-fill"></i>
+              </td>
+            {% endif %}
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="text-center py-4" style="color:var(--text-muted);">
+              No predictions available.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    {% if fixture.finished %}
+    <div style="padding:0.6rem 1rem;border-top:1px solid var(--border);display:flex;gap:1rem;flex-wrap:wrap;">
+      <span style="font-size:0.75rem;color:var(--text-muted);">
+        <span style="color:#4ade80;font-weight:700;">2–1</span> exact score (2 pts)
+      </span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">
+        <span style="color:var(--gold);font-weight:700;">2–1</span> correct result (1 pt)
+      </span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">
+        <span style="color:#e85d5d;font-weight:700;">2–1</span> wrong (0 pts)
+      </span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var cards = document.querySelectorAll('.vote-card[data-filter]');
+  var voteCards = document.getElementById('vote-cards');
+  var tbody = document.getElementById('pred-table-body');
+  var hint = document.getElementById('filter-hint');
+  if (!cards.length || !tbody) return;
+
+  var activeFilter = null;
+
+  function applyFilter(filter) {
+    activeFilter = filter;
+    cards.forEach(function (c) {
+      c.classList.toggle('active-filter', c.dataset.filter === filter);
+    });
+    if (voteCards) voteCards.classList.add('has-filter');
+    if (hint) hint.style.display = '';
+    tbody.querySelectorAll('tr[data-result]').forEach(function (row) {
+      row.classList.toggle('filter-hidden', row.dataset.result !== filter);
+    });
+  }
+
+  function clearFilter() {
+    activeFilter = null;
+    cards.forEach(function (c) { c.classList.remove('active-filter'); });
+    if (voteCards) voteCards.classList.remove('has-filter');
+    if (hint) hint.style.display = 'none';
+    tbody.querySelectorAll('tr[data-result]').forEach(function (row) {
+      row.classList.remove('filter-hidden');
+    });
+  }
+
+  cards.forEach(function (card) {
+    card.addEventListener('click', function () {
+      var filter = card.dataset.filter;
+      if (activeFilter === filter) {
+        clearFilter();
+      } else {
+        applyFilter(filter);
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}
