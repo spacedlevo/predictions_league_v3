@@ -49,12 +49,14 @@ def create_app():
     from routes.fixture import bp as fixture_bp
     from routes.api import bp as api_bp
     from routes.cup import bp as cup_bp
+    from routes.history import bp as history_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(player_bp)
     app.register_blueprint(gameweek_bp)
     app.register_blueprint(fixture_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(cup_bp)
+    app.register_blueprint(history_bp)
 
     @app.errorhandler(404)
     def not_found(e):

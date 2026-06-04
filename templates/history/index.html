@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}History — Predictions League{% endblock %}
+
+{% block extra_head %}
+<style>
+  #history-table thead th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+  }
+  #history-table thead th[data-sort]:hover {
+    color: var(--white);
+  }
+  #history-table thead th[data-sort].sorted {
+    color: var(--gold);
+  }
+  .sort-icon {
+    font-size: 0.7rem;
+    margin-left: 3px;
+    opacity: 0.8;
+  }
+  .winner-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .winner-row:last-child { border-bottom: none; }
+  .winner-season {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    min-width: 84px;
+    flex-shrink: 0;
+  }
+  .winner-names { flex: 1; min-width: 0; }
+  .winner-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .joint-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+  .winner-stats {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .winner-pts {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--gold);
+    line-height: 1.2;
+  }
+  .winner-breakdown {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .ppg-cell {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+  .season-toggle {
+    background: var(--navy-light);
+    border: none;
+    color: var(--white);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+  }
+  .season-toggle:hover { background: #2a4070; }
+  .season-toggle .bi-chevron-down {
+    transition: transform 0.2s;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .season-toggle[aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+  }
+  .season-toggle-meta {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    text-transform: none;
+    font-family: 'DM Sans', sans-serif;
+    margin-left: 0.75rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <p class="mb-1" style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">All Seasons</p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;">History</h1>
+</div>
+
+<div class="row g-4">
+
+  <!-- Previous Winners -->
+  <div class="col-12 col-lg-4">
+    <p class="section-header">Previous Winners</p>
+    {% if season_winners %}
+    <div class="panel">
+      {% for entry in season_winners %}
+      <div class="winner-row">
+        <span class="winner-season">{{ entry.season }}</span>
+        <div class="winner-names">
+          {% if entry.winners|length > 1 %}
+          <div class="joint-badge">Joint</div>
+          {% endif %}
+          {% for w in entry.winners %}
+          <div class="winner-name {% if not loop.first %}mt-1{% endif %}">
+            <a href="/player/{{ w.player_id }}" class="player-name-link">{{ w.web_name | title }}</a>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="winner-stats">
+          <div class="winner-pts">{{ entry.winners[0].total_points }}pts</div>
+          <div class="winner-breakdown">{{ entry.winners[0].correct_results }} results · {{ entry.winners[0].correct_scores }} scores</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="panel" style="padding:1rem 1.25rem;">
+      <p style="color:var(--text-muted);margin:0;font-size:0.9rem;">No completed seasons yet.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- All-Time Table -->
+  <div class="col-12 col-lg-8">
+    <p class="section-header">All-Time Table</p>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="pl-table" id="history-table">
+          <thead>
+            <tr>
+              <th data-sort="num">#</th>
+              <th data-sort="alpha">Player</th>
+              <th data-sort="num" class="d-none d-sm-table-cell">Seasons</th>
+              <th data-sort="num" class="d-none d-sm-table-cell">Games</th>
+              <th data-sort="num">Pts</th>
+              <th data-sort="num">Results</th>
+              <th data-sort="num">Scores</th>
+              <th data-sort="num" title="Points per game">PPG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in all_time %}
+            <tr onclick="window.location='/player/{{ row.player_id }}'">
+              <td>
+                {% if row.position == 1 %}
+                  <span class="rank-badge rank-1">{{ row.position }}</span>
+                {% elif row.position == 2 %}
+                  <span class="rank-badge rank-2">{{ row.position }}</span>
+                {% elif row.position == 3 %}
+                  <span class="rank-badge rank-3">{{ row.position }}</span>
+                {% else %}
+                  <span class="rank-badge rank-n">{{ row.position }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="/player/{{ row.player_id }}" class="player-name-link">{{ row.web_name | title }}</a>
+              </td>
+              <td class="d-none d-sm-table-cell">{{ row.seasons_played }}</td>
+              <td class="d-none d-sm-table-cell">{{ row.games_played }}</td>
+              <td class="pts-cell">{{ row.total_points }}</td>
+              <td>{{ row.correct_results }}</td>
+              <td>{{ row.correct_scores }}</td>
+              <td class="ppg-cell">{{ "%.2f"|format(row.ppg) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Per-Season Tables -->
+<div class="mt-5">
+  <p class="section-header">Season Tables</p>
+  {% if seasons_table %}
+    {% for entry in seasons_table %}
+    {% set season_id = entry.season | replace('/', '-') %}
+    <div class="panel mb-3">
+      <button class="season-toggle"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#season-{{ season_id }}"
+              aria-expanded="false"
+              aria-controls="season-{{ season_id }}">
+        <span>
+          {{ entry.season }}
+          {% if entry.players %}
+          <span class="season-toggle-meta">{{ entry.players[0].web_name | title }} &middot; {{ entry.players[0].total_points }}pts</span>
+          {% endif %}
+        </span>
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <div class="collapse" id="season-{{ season_id }}">
+        <div class="table-wrap">
+          <table class="pl-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Pts</th>
+                <th>Results</th>
+                <th>Scores</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in entry.players %}
+              <tr onclick="window.location='/player/{{ row.player_id }}'">
+                <td>
+                  {% if row.position == 1 %}
+                    <span class="rank-badge rank-1">{{ row.position }}</span>
+                  {% elif row.position == 2 %}
+                    <span class="rank-badge rank-2">{{ row.position }}</span>
+                  {% elif row.position == 3 %}
+                    <span class="rank-badge rank-3">{{ row.position }}</span>
+                  {% else %}
+                    <span class="rank-badge rank-n">{{ row.position }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="/player/{{ row.player_id }}" class="player-name-link">{{ row.web_name | title }}</a>
+                </td>
+                <td class="pts-cell">{{ row.total_points }}</td>
+                <td>{{ row.correct_results }}</td>
+                <td>{{ row.correct_scores }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="panel" style="padding:1rem 1.25rem;">
+    <p style="color:var(--text-muted);margin:0;font-size:0.9rem;">No completed seasons yet.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var table = document.getElementById('history-table');
+  if (!table) return;
+
+  var sortCol = null, sortAsc = true;
+  var headers = Array.from(table.querySelectorAll('thead th[data-sort]'));
+
+  headers.forEach(function (th, idx) {
+    th.addEventListener('click', function () {
+      var defaultAsc = (idx === 0);
+      sortAsc = (sortCol === idx) ? !sortAsc : defaultAsc;
+      sortCol = idx;
+
+      var isNum = th.dataset.sort === 'num';
+      var tbody = table.querySelector('tbody');
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+
+      rows.sort(function (a, b) {
+        var aText = (a.cells[idx] ? a.cells[idx].textContent.trim() : '');
+        var bText = (b.cells[idx] ? b.cells[idx].textContent.trim() : '');
+        if (isNum) {
+          return sortAsc ? (parseFloat(aText) || 0) - (parseFloat(bText) || 0)
+                         : (parseFloat(bText) || 0) - (parseFloat(aText) || 0);
+        }
+        return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+      });
+
+      rows.forEach(function (r) { tbody.appendChild(r); });
+
+      headers.forEach(function (h) {
+        h.classList.remove('sorted');
+        var icon = h.querySelector('.sort-icon');
+        if (icon) icon.remove();
+      });
+      th.classList.add('sorted');
+      var icon = document.createElement('span');
+      icon.className = 'sort-icon';
+      icon.textContent = sortAsc ? '▲' : '▼';
+      th.appendChild(icon);
+    });
+  });
+})();
+</script>
+{% endblock %}

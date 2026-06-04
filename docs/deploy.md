@@ -11,6 +11,26 @@ This guide covers the initial setup and ongoing update workflow for the Predicti
 
 ---
 
+## Handling old apps
+
+If you have a previous version of the site (e.g. `predictions_league_v2`) already running on PythonAnywhere, deal with it before creating the new web app.
+
+**Free tier:** PythonAnywhere's free plan allows only one web app. You must delete the old app before you can create a new one.
+
+1. Dashboard → **Web**
+2. Scroll to the old app and click **Delete**
+3. Confirm the deletion
+
+Once deleted, proceed with the first-time setup below. You can also clean up the old repo directory if you no longer need it:
+
+```bash
+rm -rf ~/predictions_league_v2   # adjust the path to match your old repo
+```
+
+**Paid plan:** You can run multiple web apps simultaneously. You may keep the old app running while setting up the new one, then delete it once the new one is verified.
+
+---
+
 ## First-time setup
 
 ### 1. Open a Bash console

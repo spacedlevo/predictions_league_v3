@@ -578,3 +578,63 @@ def get_cup_gw_data(conn, season, gameweeks):
         pid = row["player_id"]
         result.setdefault(gw, {}).setdefault(pid, []).append(row)
     return result
+
+
+# ---------------------------------------------------------------------------
+# History queries
+# ---------------------------------------------------------------------------
+
+def get_all_time_table(conn):
+    """All-time standings across all seasons. Excludes pundits. No active filter."""
+    return _fetchall(conn, """
+        SELECT
+            p.player_id,
+            p.player_name,
+            p.web_name,
+            COUNT(DISTINCT f.season) AS seasons_played,
+            COUNT(r.result)          AS games_played,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END)
+                AS correct_results,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END)
+                AS correct_scores,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END)
+                AS total_points
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f ON pred.fixture_id = f.fixture_id
+        JOIN results r ON f.fixture_id = r.fixture_id
+        WHERE p.pundit = 0
+        GROUP BY p.player_id, p.player_name, p.web_name
+        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC
+    """)
+
+
+def get_all_season_standings(conn, exclude_season):
+    """Per-season standings for all non-pundit players, excluding the current season."""
+    return _fetchall(conn, """
+        SELECT
+            f.season,
+            p.player_id,
+            p.player_name,
+            p.web_name,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END)
+                AS correct_results,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END)
+                AS correct_scores,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END)
+                AS total_points
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f ON pred.fixture_id = f.fixture_id
+        JOIN results r ON f.fixture_id = r.fixture_id
+        WHERE p.pundit = 0
+          AND f.season != ?
+        GROUP BY f.season, p.player_id, p.player_name, p.web_name
+        ORDER BY f.season DESC, total_points DESC, correct_results DESC, correct_scores DESC
+    """, (exclude_season,))
