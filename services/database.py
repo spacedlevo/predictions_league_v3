@@ -267,6 +267,7 @@ def get_player_predicted_table(conn, player_id, season):
             JOIN teams    ht ON f.home_teamid     = ht.team_id
             WHERE pred.player_id = ?
               AND f.season       = ?
+              AND f.finished     = 1
               AND NOT (pred.home_goals = 9 AND pred.away_goals = 9)
 
             UNION ALL
@@ -285,6 +286,7 @@ def get_player_predicted_table(conn, player_id, season):
             JOIN teams    at ON f.away_teamid     = at.team_id
             WHERE pred.player_id = ?
               AND f.season       = ?
+              AND f.finished     = 1
               AND NOT (pred.home_goals = 9 AND pred.away_goals = 9)
         ) sub
         GROUP BY team_id, team_name
