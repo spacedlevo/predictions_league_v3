@@ -21,7 +21,13 @@ def list_gameweeks():
     with get_connection() as conn:
         season = get_current_season(conn)
         gameweeks = get_all_gameweeks(conn)
-    return render_template("gameweek/list.html", gameweeks=gameweeks, season=season)
+
+    featured_gw = next((gw for gw in gameweeks if gw["current_gameweek"] or gw["next_gameweek"]), None)
+    rest = sorted(
+        [gw for gw in gameweeks if gw is not featured_gw],
+        key=lambda g: g["gameweek"],
+    )
+    return render_template("gameweek/list.html", featured_gw=featured_gw, gameweeks=rest, season=season)
 
 
 @bp.route("/<int:gw_number>")
