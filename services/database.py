@@ -151,7 +151,7 @@ def get_league_table_excluding_gameweek(conn, season, exclude_gameweek):
           AND f.season = ?
           AND f.gameweek != ?
         GROUP BY p.player_id
-        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC
+        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """, (season, exclude_gameweek))
 
 
@@ -185,7 +185,7 @@ def get_league_table(conn, season):
         WHERE p.active = 1
           AND f.season = ?
         GROUP BY p.player_id, p.player_name, p.web_name
-        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC
+        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """, (season,))
 
 
@@ -347,7 +347,7 @@ def get_gameweek_table(conn, gameweek, season):
           AND f.gameweek = ?
           AND f.season = ?
         GROUP BY p.player_id, p.player_name, p.web_name
-        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC
+        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """, (gameweek, season))
 
 
@@ -477,7 +477,7 @@ def get_gameweek_leaderboard(conn, gameweek, season):
           AND f.gameweek = ?
           AND f.season = ?
         GROUP BY p.player_id, p.player_name
-        ORDER BY total_points DESC, _correct_for_sort DESC, exact_scores DESC
+        ORDER BY total_points DESC, _correct_for_sort DESC, exact_scores DESC, p.player_name ASC
     """, (gameweek, season))
 
 
@@ -610,7 +610,7 @@ def get_all_time_table(conn):
         JOIN results r ON f.fixture_id = r.fixture_id
         WHERE p.pundit = 0
         GROUP BY p.player_id, p.player_name, p.web_name
-        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC
+        ORDER BY total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """)
 
 
@@ -638,5 +638,5 @@ def get_all_season_standings(conn, exclude_season):
         WHERE p.pundit = 0
           AND f.season != ?
         GROUP BY f.season, p.player_id, p.player_name, p.web_name
-        ORDER BY f.season DESC, total_points DESC, correct_results DESC, correct_scores DESC
+        ORDER BY f.season DESC, total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """, (exclude_season,))
