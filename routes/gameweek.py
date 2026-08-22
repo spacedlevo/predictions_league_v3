@@ -22,7 +22,10 @@ def list_gameweeks():
         season = get_current_season(conn)
         gameweeks = get_all_gameweeks(conn)
 
-    featured_gw = next((gw for gw in gameweeks if gw["current_gameweek"] or gw["next_gameweek"]), None)
+    featured_gw = (
+        next((gw for gw in gameweeks if gw["current_gameweek"]), None)
+        or next((gw for gw in gameweeks if gw["next_gameweek"]), None)
+    )
     rest = sorted(
         [gw for gw in gameweeks if gw is not featured_gw],
         key=lambda g: g["gameweek"],

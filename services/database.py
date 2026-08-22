@@ -319,7 +319,7 @@ def get_player_prediction_history(conn, player_id, season):
         LEFT JOIN results r ON f.fixture_id  = r.fixture_id
         WHERE pred.player_id = ?
           AND f.season        = ?
-        ORDER BY f.kickoff_dttm DESC
+        ORDER BY f.kickoff_dttm ASC
     """, (player_id, season))
 
 

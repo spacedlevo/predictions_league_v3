@@ -50,12 +50,15 @@ def detail(fixture_id):
         # Vote counts and score frequency (visible, non-placeholder predictions only)
         vote_counts = {"H": 0, "D": 0, "A": 0}
         score_freq = {}
+        score_freq_by_result = {"H": {}, "D": {}, "A": {}}
         for row in players_data:
             if row.get("visible"):
                 result_key = row["predicted_result"]
                 vote_counts[result_key] = vote_counts.get(result_key, 0) + 1
                 score_key = f"{row['home']}–{row['away']}"
                 score_freq[score_key] = score_freq.get(score_key, 0) + 1
+                if result_key in score_freq_by_result:
+                    score_freq_by_result[result_key][score_key] = score_freq_by_result[result_key].get(score_key, 0) + 1
 
         total_votes = sum(vote_counts.values())
 
@@ -76,4 +79,6 @@ def detail(fixture_id):
         vote_counts=vote_counts,
         total_votes=total_votes,
         popular_scores=popular_scores,
+        score_freq=score_freq,
+        score_freq_by_result=score_freq_by_result,
     )

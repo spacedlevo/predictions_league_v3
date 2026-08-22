@@ -122,7 +122,13 @@
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0.1rem 0.2rem;
+    transition: background 0.1s;
   }
+  .score-bar-row:hover { background: rgba(255,255,255,0.04); }
+  .score-bar-row.active-score { background: rgba(240,180,41,0.08); }
   .score-bar-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
@@ -131,7 +137,9 @@
     min-width: 42px;
     text-align: right;
     color: var(--white);
+    transition: color 0.15s;
   }
+  .score-bar-row.active-score .score-bar-label { color: var(--gold); }
   .score-bar-track {
     flex: 1;
     height: 22px;
@@ -147,8 +155,9 @@
     align-items: center;
     padding-left: 0.5rem;
     min-width: 22px;
-    transition: width 0.4s ease;
+    transition: width 0.3s ease, background 0.15s;
   }
+  .score-bar-row.active-score .score-bar-fill { background: var(--white); }
   .score-bar-count {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
@@ -300,22 +309,8 @@
   <div class="col-12 col-lg-6">
     <p class="section-header">Most Popular Scores</p>
     <div class="panel" style="padding:1rem 1rem 0.5rem;">
-      {% if popular_scores %}
-        {% for s in popular_scores %}
-        <div class="score-bar-row">
-          <div class="score-bar-label">{{ s.score }}</div>
-          <div class="score-bar-track">
-            <div class="score-bar-fill" style="width:{{ s.pct }}%;">
-              <span class="score-bar-count">{{ s.count }}</span>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <p style="color:var(--text-muted);font-size:0.9rem;text-align:center;padding:0.75rem 0;">
-          No predictions yet.
-        </p>
-      {% endif %}
+      <div id="scores-container"></div>
+      <p id="score-filter-hint" class="filter-hint" style="display:none;">Click again to clear score filter</p>
     </div>
   </div>
 
@@ -338,7 +333,8 @@
         <tbody id="pred-table-body">
           {% for row in players_data %}
           <tr onclick="window.location='/player/{{ row.player_id }}'"
-              data-result="{{ row.predicted_result if row.visible else '' }}">
+              data-result="{{ row.predicted_result if row.visible else '' }}"
+              data-score="{% if row.visible %}{{ row.home }}–{{ row.away }}{% endif %}">
             <td>
               <a class="player-name-link" href="/player/{{ row.player_id }}">{{ row.web_name | title }}</a>
             </td>
@@ -415,39 +411,100 @@
   var voteCards = document.getElementById('vote-cards');
   var tbody = document.getElementById('pred-table-body');
   var hint = document.getElementById('filter-hint');
-  if (!cards.length || !tbody) return;
+  var scoresContainer = document.getElementById('scores-container');
+  var scoreHint = document.getElementById('score-filter-hint');
+  if (!cards.length || !tbody || !scoresContainer) return;
 
-  var activeFilter = null;
+  var scoresByResult = {{ score_freq_by_result | tojson }};
+  var allScores = {{ score_freq | tojson }};
+  var totalVotes = {{ total_votes }};
 
-  function applyFilter(filter) {
-    activeFilter = filter;
+  var activeResult = null;
+  var activeScore = null;
+
+  function applyFilters() {
+    tbody.querySelectorAll('tr[data-result]').forEach(function (row) {
+      var matchResult = !activeResult || row.dataset.result === activeResult;
+      var matchScore = !activeScore || row.dataset.score === activeScore;
+      row.classList.toggle('filter-hidden', !(matchResult && matchScore));
+    });
+  }
+
+  function renderScores(scoreMap, base) {
+    var items = Object.entries(scoreMap).sort(function (a, b) { return b[1] - a[1]; });
+    if (!items.length) {
+      scoresContainer.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;text-align:center;padding:0.75rem 0;">No predictions yet.</p>';
+      return;
+    }
+    scoresContainer.innerHTML = items.map(function (item) {
+      var score = item[0];
+      var count = item[1];
+      var pct = base ? Math.round(count / base * 100) : 0;
+      var isActive = activeScore === score;
+      return '<div class="score-bar-row' + (isActive ? ' active-score' : '') + '" data-score="' + score + '" title="Click to see who predicted ' + score + '">' +
+        '<div class="score-bar-label">' + score + '</div>' +
+        '<div class="score-bar-track">' +
+          '<div class="score-bar-fill" style="width:' + pct + '%;">' +
+            '<span class="score-bar-count">' + count + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    scoresContainer.querySelectorAll('.score-bar-row[data-score]').forEach(function (bar) {
+      bar.addEventListener('click', function () {
+        var score = bar.dataset.score;
+        activeScore = (activeScore === score) ? null : score;
+        if (scoreHint) scoreHint.style.display = activeScore ? '' : 'none';
+        renderCurrentScores();
+        applyFilters();
+      });
+    });
+  }
+
+  function renderCurrentScores() {
+    if (activeResult) {
+      var map = scoresByResult[activeResult] || {};
+      var base = Object.values(map).reduce(function (a, b) { return a + b; }, 0);
+      renderScores(map, base || 1);
+    } else {
+      renderScores(allScores, totalVotes || 1);
+    }
+  }
+
+  renderCurrentScores();
+
+  function setResultFilter(filter) {
+    activeResult = filter;
+    activeScore = null;
+    if (scoreHint) scoreHint.style.display = 'none';
     cards.forEach(function (c) {
       c.classList.toggle('active-filter', c.dataset.filter === filter);
     });
     if (voteCards) voteCards.classList.add('has-filter');
     if (hint) hint.style.display = '';
-    tbody.querySelectorAll('tr[data-result]').forEach(function (row) {
-      row.classList.toggle('filter-hidden', row.dataset.result !== filter);
-    });
+    renderCurrentScores();
+    applyFilters();
   }
 
-  function clearFilter() {
-    activeFilter = null;
+  function clearFilters() {
+    activeResult = null;
+    activeScore = null;
+    if (scoreHint) scoreHint.style.display = 'none';
     cards.forEach(function (c) { c.classList.remove('active-filter'); });
     if (voteCards) voteCards.classList.remove('has-filter');
     if (hint) hint.style.display = 'none';
-    tbody.querySelectorAll('tr[data-result]').forEach(function (row) {
-      row.classList.remove('filter-hidden');
-    });
+    renderCurrentScores();
+    applyFilters();
   }
 
   cards.forEach(function (card) {
     card.addEventListener('click', function () {
       var filter = card.dataset.filter;
-      if (activeFilter === filter) {
-        clearFilter();
+      if (activeResult === filter) {
+        clearFilters();
       } else {
-        applyFilter(filter);
+        setResultFilter(filter);
       }
     });
   });
