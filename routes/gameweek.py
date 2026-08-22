@@ -73,6 +73,7 @@ def view(gw_number):
             if visible:
                 cell["home"] = pred["home_goals"]
                 cell["away"] = pred["away_goals"]
+                cell["predicted_result"] = pred["predicted_result"]
                 cell["pts"] = calc_points(pred["predicted_result"], pred["home_goals"], pred["away_goals"], fixture.get("result"), fixture.get("home_goals"), fixture.get("away_goals"))
             if pid not in pred_grid:
                 pred_grid[pid] = {}

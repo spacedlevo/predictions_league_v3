@@ -150,7 +150,7 @@
       <div class="fixture-row" style="transition:background 0.12s;" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background=''">
         <span class="fixture-team home">{{ f.home_team | title}}</span>
 
-        {% if f.finished %}
+        {% if f.finished or f.provisional_finished %}
           <span class="fixture-score">{{ f.home_goals }} – {{ f.away_goals }}</span>
         {% elif f.started %}
           <span class="fixture-score">
@@ -166,7 +166,7 @@
         <span class="fixture-team away">{{ f.away_team | title }}</span>
 
         <span style="flex:0 0 52px;text-align:right;">
-          {% if f.started and not f.finished %}
+          {% if f.started and not f.finished and not f.provisional_finished %}
           <span class="live-badge">● LIVE</span>
           {% endif %}
         </span>

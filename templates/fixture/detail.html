@@ -225,7 +225,7 @@
 <div class="fixture-hero mb-4">
   <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.9rem;">
     {{ season }} &nbsp;&middot;&nbsp; Gameweek {{ fixture.gameweek }}
-    {% if fixture.finished %}
+    {% if fixture.finished or fixture.provisional_finished %}
       &nbsp;<span style="background:var(--navy-light);border:1px solid var(--border);color:var(--silver);font-size:0.68rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:3px;">FT</span>
     {% elif fixture.started %}
       &nbsp;<span style="background:var(--gold);color:var(--navy);font-size:0.68rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:3px;">Live</span>
@@ -234,7 +234,7 @@
   <div class="hero-teams">
     <div class="hero-team home">{{ fixture.home_team | title }}</div>
 
-    {% if fixture.finished %}
+    {% if fixture.finished or fixture.provisional_finished %}
       <div class="hero-score">{{ fixture.home_goals }} – {{ fixture.away_goals }}</div>
     {% else %}
       <div class="hero-score pending">

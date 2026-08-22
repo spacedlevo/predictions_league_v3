@@ -112,6 +112,14 @@
     color: var(--border);
     font-size: 0.8rem;
   }
+  .pred-dot {
+    font-size: 0.45rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .pred-dot-H { color: #60a5fa; }
+  .pred-dot-D { color: var(--silver); }
+  .pred-dot-A { color: #f87171; }
 
   /* Fixture column header */
   .fixture-th {
@@ -285,7 +293,7 @@
             <tr>
               <th class="player-col sticky-col">Player</th>
               {% for f in fixtures %}
-              <th class="fixture-th {% if f.finished %}fx-done{% elif f.started %}fx-live{% endif %}">
+              <th class="fixture-th {% if f.finished or f.provisional_finished %}fx-done{% elif f.started %}fx-live{% endif %}">
                 <a href="/fixture/{{ f.fixture_id }}" style="color:inherit;text-decoration:none;">
                   <span class="teams">{{ f.home_team[:3] | upper }} v {{ f.away_team[:3] | upper }}</span>
                   <span class="date">{{ f.kickoff_dttm | format_kickoff_day }}</span>
@@ -306,25 +314,34 @@
                 {% set cell = pred_grid.get(p.player_id, {}).get(f.fixture_id) %}
                 <td>
                   {% if cell and cell.visible %}
-                    {% if cell.placeholder %}
-                      {% if cell.pts == 2 %}
-                        <span class="pred-score pts-2" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
-                      {% elif cell.pts == 1 %}
-                        <span class="pred-score pts-1" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
-                      {% elif cell.pts == 0 %}
-                        <span class="pred-score pts-0" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
-                      {% else %}
-                        <span class="pred-score pts-pending" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
+                    <div style="display:inline-flex;align-items:center;justify-content:center;gap:3px;">
+                      {% if cell.predicted_result == 'H' %}
+                        <span class="pred-dot pred-dot-H">●</span>
+                      {% elif cell.predicted_result == 'D' %}
+                        <span class="pred-dot pred-dot-D">●</span>
+                      {% elif cell.predicted_result == 'A' %}
+                        <span class="pred-dot pred-dot-A">●</span>
                       {% endif %}
-                    {% elif cell.pts == 2 %}
-                      <span class="pred-score pts-2">{{ cell.home }}–{{ cell.away }}</span>
-                    {% elif cell.pts == 1 %}
-                      <span class="pred-score pts-1">{{ cell.home }}–{{ cell.away }}</span>
-                    {% elif cell.pts == 0 %}
-                      <span class="pred-score pts-0">{{ cell.home }}–{{ cell.away }}</span>
-                    {% else %}
-                      <span class="pred-score pts-pending">{{ cell.home }}–{{ cell.away }}</span>
-                    {% endif %}
+                      {% if cell.placeholder %}
+                        {% if cell.pts == 2 %}
+                          <span class="pred-score pts-2" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
+                        {% elif cell.pts == 1 %}
+                          <span class="pred-score pts-1" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
+                        {% elif cell.pts == 0 %}
+                          <span class="pred-score pts-0" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
+                        {% else %}
+                          <span class="pred-score pts-pending" title="No submission">{{ cell.home }}–{{ cell.away }}</span>
+                        {% endif %}
+                      {% elif cell.pts == 2 %}
+                        <span class="pred-score pts-2">{{ cell.home }}–{{ cell.away }}</span>
+                      {% elif cell.pts == 1 %}
+                        <span class="pred-score pts-1">{{ cell.home }}–{{ cell.away }}</span>
+                      {% elif cell.pts == 0 %}
+                        <span class="pred-score pts-0">{{ cell.home }}–{{ cell.away }}</span>
+                      {% else %}
+                        <span class="pred-score pts-pending">{{ cell.home }}–{{ cell.away }}</span>
+                      {% endif %}
+                    </div>
                   {% elif cell and not cell.visible %}
                     <span class="pred-hidden" title="Not yet revealed"><i class="bi bi-lock-fill"></i></span>
                   {% else %}
@@ -358,6 +375,11 @@
         <span style="font-size:0.75rem;color:var(--text-muted);">
           <i class="bi bi-lock-fill" style="color:var(--border);"></i> not yet revealed
         </span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">
+          <span style="color:#60a5fa;font-size:0.55rem;">●</span> home
+          <span style="color:var(--silver);font-size:0.55rem;">●</span> draw
+          <span style="color:#f87171;font-size:0.55rem;">●</span> away
+        </span>
       </div>
     </div>
   </div>
@@ -373,7 +395,7 @@
     <div class="fixture-row" style="transition:background 0.12s;" onmouseover="this.style.background='var(--navy-light)'" onmouseout="this.style.background=''">
       <span class="fixture-team home">{{ f.home_team | title }}</span>
 
-      {% if f.finished %}
+      {% if f.finished or f.provisional_finished %}
         <span class="fixture-score">{{ f.home_goals }} – {{ f.away_goals }}</span>
       {% else %}
         <span class="fixture-score pending">
