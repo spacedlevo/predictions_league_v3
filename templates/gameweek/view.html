@@ -142,7 +142,7 @@
   <div>
     <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">
       {{ season }}
-      {% if gw.current_gameweek %}
+      {% if gw.current_gameweek and not gw.finished %}
         &nbsp;<span style="background:var(--gold);color:var(--navy);font-size:0.7rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;">Live</span>
       {% elif gw.next_gameweek %}
         &nbsp;<span style="background:var(--navy-light);border:1px solid var(--border);color:var(--silver);font-size:0.7rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;">Next Up</span>
