@@ -15,13 +15,14 @@ from services.scoring import is_prediction_visible, calc_points
 
 bp = Blueprint("gameweek", __name__, url_prefix="/gameweek")
 
-_SHORT_TEAM_NAMES = {
-    "Manchester City": "MCI",
-    "Manchester United": "MUN",
-}
-
 def _short_team(name):
-    return _SHORT_TEAM_NAMES.get(name, name[:3].upper())
+    lower = name.lower()
+    if "manchester" in lower or "man " in lower:
+        if "united" in lower or "utd" in lower:
+            return "MUN"
+        if "city" in lower:
+            return "MCI"
+    return name[:3].upper()
 
 
 @bp.route("/")
