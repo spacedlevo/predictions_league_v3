@@ -236,6 +236,8 @@
 
     {% if fixture.finished or fixture.provisional_finished %}
       <div class="hero-score">{{ fixture.home_goals }} – {{ fixture.away_goals }}</div>
+    {% elif fixture.started %}
+      <div class="hero-score">{{ fixture.home_goals if fixture.home_goals is not none else 0 }} – {{ fixture.away_goals if fixture.away_goals is not none else 0 }}</div>
     {% else %}
       <div class="hero-score pending">
         <span style="display:block;font-size:0.85rem;font-weight:600;font-family:'DM Sans',sans-serif;">{{ fixture.kickoff_dttm | format_kickoff_day }}</span>
