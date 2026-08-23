@@ -295,7 +295,7 @@
               {% for f in fixtures %}
               <th class="fixture-th {% if f.finished or f.provisional_finished %}fx-done{% elif f.started %}fx-live{% endif %}">
                 <a href="/fixture/{{ f.fixture_id }}" style="color:inherit;text-decoration:none;">
-                  <span class="teams">{{ f.home_team[:3] | upper }} v {{ f.away_team[:3] | upper }}</span>
+                  <span class="teams">{{ f.home_team_short }} v {{ f.away_team_short }}</span>
                   <span class="date">{{ f.kickoff_dttm | format_kickoff_day }}</span>
                 </a>
               </th>

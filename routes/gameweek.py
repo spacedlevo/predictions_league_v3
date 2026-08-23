@@ -15,6 +15,14 @@ from services.scoring import is_prediction_visible, calc_points
 
 bp = Blueprint("gameweek", __name__, url_prefix="/gameweek")
 
+_SHORT_TEAM_NAMES = {
+    "Manchester City": "MCI",
+    "Manchester United": "MUN",
+}
+
+def _short_team(name):
+    return _SHORT_TEAM_NAMES.get(name, name[:3].upper())
+
 
 @bp.route("/")
 def list_gameweeks():
@@ -54,6 +62,10 @@ def view(gw_number):
         active_count = get_active_player_count(conn)
         fixture_ids = [f["fixture_id"] for f in fixtures]
         pred_counts = get_fixture_prediction_counts(conn, fixture_ids)
+
+        for f in fixtures:
+            f["home_team_short"] = _short_team(f["home_team"])
+            f["away_team_short"] = _short_team(f["away_team"])
 
         fixture_map = {}
         for f in fixtures:
