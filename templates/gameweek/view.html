@@ -405,6 +405,16 @@
       {% endif %}
 
       <span class="fixture-team away">{{ f.away_team | title }}</span>
+
+      <span style="flex:0 0 130px;text-align:right;">
+        {% if (f.finished or f.provisional_finished) and f.accuracy %}
+          <span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">
+            <span style="color:#4ade80;">{{ f.accuracy.exact_scores }}</span> exact
+            &middot;
+            <span style="color:var(--gold);">{{ f.accuracy.correct_results }}</span> correct
+          </span>
+        {% endif %}
+      </span>
     </div>
     </a>
     {% else %}

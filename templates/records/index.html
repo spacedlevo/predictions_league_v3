@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Records — Predictions League{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">Season {{ season }}</p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;line-height:1;">
+    Season <span style="color:var(--gold);">Records</span>
+  </h1>
+</div>
+
+{% if not best_gw_score %}
+<div class="panel py-5 text-center" style="color:var(--text-muted);">
+  No completed gameweeks yet this season.
+</div>
+{% else %}
+
+<div class="row g-3">
+
+  <!-- ── Best Single GW Score ── -->
+  <div class="col-12 col-md-6">
+    <p class="section-header">Best Single Gameweek</p>
+    <div class="panel">
+      <div style="padding:1.25rem 1.25rem 1rem;">
+        <div style="display:flex;align-items:baseline;gap:0.5rem;margin-bottom:0.6rem;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:3rem;line-height:1;color:var(--gold);">{{ best_gw_score.points }}</span>
+          <span style="font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">pts</span>
+          {% if best_gw_score.gameweek %}
+          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">— GW{{ best_gw_score.gameweek }}</span>
+          {% endif %}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          {% for p in best_gw_score.players %}
+          <a href="/player/{{ p.player_id }}" style="text-decoration:none;">
+            <span style="background:var(--navy-light);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.6rem;font-size:0.85rem;color:var(--white);font-weight:500;">
+              {{ p.web_name | title }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Most Exact Scores in a GW ── -->
+  <div class="col-12 col-md-6">
+    <p class="section-header">Most Exact Scores in a Gameweek</p>
+    <div class="panel">
+      <div style="padding:1.25rem 1.25rem 1rem;">
+        <div style="display:flex;align-items:baseline;gap:0.5rem;margin-bottom:0.6rem;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:3rem;line-height:1;color:#4ade80;">{{ best_gw_exact.exact_scores }}</span>
+          <span style="font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">exact</span>
+          {% if best_gw_exact.gameweek %}
+          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">— GW{{ best_gw_exact.gameweek }}</span>
+          {% endif %}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          {% for p in best_gw_exact.players %}
+          <a href="/player/{{ p.player_id }}" style="text-decoration:none;">
+            <span style="background:var(--navy-light);border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.6rem;font-size:0.85rem;color:var(--white);font-weight:500;">
+              {{ p.web_name | title }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GW Wins Leaderboard ── -->
+  <div class="col-12 col-md-6">
+    <p class="section-header">Gameweek Wins</p>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="pl-table">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th>Player</th>
+              <th class="text-center">Wins</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set ns = namespace(pos=1, prev_wins=-1) %}
+            {% for row in wins_table %}
+            {% if row.wins != ns.prev_wins %}{% set ns.pos = loop.index %}{% endif %}
+            <tr onclick="window.location='/player/{{ row.player_id }}'">
+              <td>
+                {% if ns.pos == 1 %}
+                  <span class="rank-badge rank-1">1</span>
+                {% elif ns.pos == 2 %}
+                  <span class="rank-badge rank-2">2</span>
+                {% elif ns.pos == 3 %}
+                  <span class="rank-badge rank-3">3</span>
+                {% else %}
+                  <span class="rank-badge rank-n">{{ ns.pos }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <a class="player-name-link" href="/player/{{ row.player_id }}">{{ row.web_name | title }}</a>
+              </td>
+              <td class="text-center pts-cell">{{ row.wins }}</td>
+            </tr>
+            {% set ns.prev_wins = row.wins %}
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center py-4" style="color:var(--text-muted);">No data yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Hardest / Easiest GW ── -->
+  <div class="col-12 col-md-6">
+    <p class="section-header">Gameweek Difficulty</p>
+    <div class="row g-3">
+
+      <div class="col-6">
+        <div class="panel text-center" style="padding:1.25rem 0.75rem 1rem;">
+          <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;">Hardest GW</div>
+          {% if hardest_gw %}
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.25rem;line-height:1;color:#e85d5d;">
+            GW{{ hardest_gw.gameweek }}
+          </div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">
+            avg <span style="color:var(--white);font-weight:600;">{{ "%.1f"|format(hardest_gw.avg) }}</span> pts
+          </div>
+          {% else %}
+          <div style="color:var(--text-muted);">—</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-6">
+        <div class="panel text-center" style="padding:1.25rem 0.75rem 1rem;">
+          <div style="font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;">Easiest GW</div>
+          {% if easiest_gw %}
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.25rem;line-height:1;color:#4ade80;">
+            GW{{ easiest_gw.gameweek }}
+          </div>
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">
+            avg <span style="color:var(--white);font-weight:600;">{{ "%.1f"|format(easiest_gw.avg) }}</span> pts
+          </div>
+          {% else %}
+          <div style="color:var(--text-muted);">—</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

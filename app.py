@@ -50,6 +50,7 @@ def create_app():
     from routes.api import bp as api_bp
     from routes.cup import bp as cup_bp
     from routes.history import bp as history_bp
+    from routes.records import bp as records_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(player_bp)
     app.register_blueprint(gameweek_bp)
@@ -57,6 +58,7 @@ def create_app():
     app.register_blueprint(api_bp)
     app.register_blueprint(cup_bp)
     app.register_blueprint(history_bp)
+    app.register_blueprint(records_bp)
 
     @app.errorhandler(404)
     def not_found(e):

@@ -3,6 +3,7 @@ from services.database import (
     get_connection,
     get_current_season,
     get_all_gameweeks,
+    get_gw_winners,
     get_gameweek_detail,
     get_gameweek_fixtures,
     get_gameweek_table,
@@ -10,6 +11,7 @@ from services.database import (
     get_all_active_players,
     get_active_player_count,
     get_fixture_prediction_counts,
+    get_fixture_accuracy_counts,
 )
 from services.scoring import is_prediction_visible, calc_points
 
@@ -30,6 +32,10 @@ def list_gameweeks():
     with get_connection() as conn:
         season = get_current_season(conn)
         gameweeks = get_all_gameweeks(conn)
+        gw_winners = get_gw_winners(conn, season)
+
+    for gw in gameweeks:
+        gw["winner"] = gw_winners.get(gw["gameweek"])
 
     featured_gw = (
         next((gw for gw in gameweeks if gw["current_gameweek"]), None)
@@ -68,10 +74,12 @@ def view(gw_number):
             f["home_team_short"] = _short_team(f["home_team"])
             f["away_team_short"] = _short_team(f["away_team"])
 
+        accuracy_counts = get_fixture_accuracy_counts(conn, fixture_ids)
         fixture_map = {}
         for f in fixtures:
             count = pred_counts.get(f["fixture_id"], 0)
             f["visible"] = is_prediction_visible(f["kickoff_dttm"], count, active_count)
+            f["accuracy"] = accuracy_counts.get(f["fixture_id"])
             fixture_map[f["fixture_id"]] = f
 
         # Build prediction grid: {player_id: {fixture_id: cell_dict}}

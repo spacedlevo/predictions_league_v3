@@ -11,6 +11,7 @@ from services.database import (
     get_gameweek_detail,
     get_active_player_count,
     get_fixture_prediction_counts,
+    get_fixture_accuracy_counts,
 )
 from services.scoring import is_prediction_visible
 
@@ -52,9 +53,11 @@ def index():
         fixture_ids = [f["fixture_id"] for f in fixtures]
         pred_counts = get_fixture_prediction_counts(conn, fixture_ids)
 
+        accuracy_counts = get_fixture_accuracy_counts(conn, fixture_ids)
         for f in fixtures:
             count = pred_counts.get(f["fixture_id"], 0)
             f["predictions_visible"] = is_prediction_visible(f["kickoff_dttm"], count, active_count)
+            f["accuracy"] = accuracy_counts.get(f["fixture_id"])
 
     return render_template(
         "home/index.html",

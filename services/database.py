@@ -361,6 +361,45 @@ def get_all_gameweeks(conn):
     """)
 
 
+def get_gw_winners(conn, season):
+    """Return the top scorer(s) for each finished gameweek in the season.
+    Returns dict {gameweek: {"web_name", "player_id", "total_points", "is_tie"}}.
+    Ties are flagged but only the first player (alphabetically) is named.
+    """
+    rows = _fetchall(conn, """
+        SELECT
+            f.gameweek,
+            p.player_id,
+            p.web_name,
+            p.player_name,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS total_points,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f ON pred.fixture_id = f.fixture_id
+        JOIN results r ON f.fixture_id = r.fixture_id
+        WHERE p.active = 1 AND f.season = ?
+        GROUP BY f.gameweek, p.player_id, p.web_name, p.player_name
+        ORDER BY f.gameweek ASC, total_points DESC, correct_results DESC, p.player_name ASC
+    """, (season,))
+
+    winners = {}
+    for row in rows:
+        gw = row["gameweek"]
+        if gw not in winners:
+            winners[gw] = {
+                "web_name": row["web_name"],
+                "player_id": row["player_id"],
+                "total_points": row["total_points"],
+                "is_tie": False,
+            }
+        elif not winners[gw]["is_tie"] and row["total_points"] == winners[gw]["total_points"]:
+            winners[gw]["is_tie"] = True
+    return winners
+
+
 def get_gameweek_detail(conn, gw_number):
     """Single gameweek row or None."""
     return _fetchone(conn, """
@@ -499,6 +538,54 @@ def get_fixture_prediction_counts(conn, fixture_ids):
         GROUP BY pred.fixture_id
     """, fixture_ids)
     return {r["fixture_id"]: r["cnt"] for r in rows}
+
+
+def get_season_gw_scores(conn, season):
+    """Per-player per-GW totals for a season, for finished GWs only (INNER JOIN results).
+    Returns all rows sorted by gameweek ASC, total_points DESC.
+    Used to derive records: best GW, most exact scores, GW wins, hardest/easiest GW."""
+    return _fetchall(conn, """
+        SELECT
+            f.gameweek,
+            p.player_id,
+            p.web_name,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS exact_scores,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS total_points
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f ON pred.fixture_id = f.fixture_id
+        JOIN results r ON f.fixture_id = r.fixture_id
+        JOIN gameweeks g ON f.gameweek = g.gameweek
+        WHERE p.active = 1 AND f.season = ? AND g.finished = 1
+        GROUP BY f.gameweek, p.player_id, p.web_name
+        ORDER BY f.gameweek ASC, total_points DESC, p.player_name ASC
+    """, (season,))
+
+
+def get_fixture_accuracy_counts(conn, fixture_ids):
+    """For a list of fixture IDs, return aggregate accuracy across all active players.
+    Returns dict {fixture_id: {"exact_scores": int, "correct_results": int}}.
+    Only includes fixtures that have results (INNER JOIN on results table)."""
+    if not fixture_ids:
+        return {}
+    placeholders = ",".join("?" * len(fixture_ids))
+    rows = _fetchall(conn, f"""
+        SELECT
+            pred.fixture_id,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS exact_scores,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results
+        FROM predictions pred
+        JOIN players p ON pred.player_id = p.player_id
+        JOIN results r ON pred.fixture_id = r.fixture_id
+        WHERE pred.fixture_id IN ({placeholders})
+          AND p.active = 1
+        GROUP BY pred.fixture_id
+    """, fixture_ids)
+    return {r["fixture_id"]: {"exact_scores": r["exact_scores"], "correct_results": r["correct_results"]} for r in rows}
 
 
 # ---------------------------------------------------------------------------

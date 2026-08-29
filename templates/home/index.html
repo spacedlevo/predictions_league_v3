@@ -165,9 +165,15 @@
 
         <span class="fixture-team away">{{ f.away_team | title }}</span>
 
-        <span style="flex:0 0 52px;text-align:right;">
+        <span style="flex:0 0 130px;text-align:right;">
           {% if f.started and not f.finished and not f.provisional_finished %}
-          <span class="live-badge">● LIVE</span>
+            <span class="live-badge">● LIVE</span>
+          {% elif (f.finished or f.provisional_finished) and f.accuracy %}
+            <span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;">
+              <span style="color:#4ade80;">{{ f.accuracy.exact_scores }}</span> exact
+              &middot;
+              <span style="color:var(--gold);">{{ f.accuracy.correct_results }}</span> correct
+            </span>
           {% endif %}
         </span>
       </div>

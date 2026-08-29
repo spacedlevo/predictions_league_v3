@@ -31,9 +31,20 @@
     {% endif %}
   </div>
   <div style="display:flex;align-items:center;gap:1rem;">
-    <span style="font-size:0.82rem;color:var(--text-muted);">
-      {{ gw.deadline_dttm | format_kickoff }}
-    </span>
+    {% if gw.finished and gw.winner %}
+      <span style="font-size:0.82rem;">
+        {% if gw.winner.is_tie %}
+          <span style="color:var(--silver);">Tied</span>
+        {% else %}
+          <span style="color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700;">{{ gw.winner.web_name | title }}</span>
+        {% endif %}
+        <span style="color:var(--text-muted);margin-left:0.2rem;">{{ gw.winner.total_points }}pts</span>
+      </span>
+    {% else %}
+      <span style="font-size:0.82rem;color:var(--text-muted);">
+        {{ gw.deadline_dttm | format_kickoff }}
+      </span>
+    {% endif %}
     <i class="bi bi-chevron-right" style="color:var(--text-muted);font-size:0.85rem;"></i>
   </div>
 </a>
