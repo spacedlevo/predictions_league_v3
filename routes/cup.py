@@ -1,3 +1,4 @@
+import math
 from flask import Blueprint, render_template
 from services.database import (
     get_connection,
@@ -5,6 +6,7 @@ from services.database import (
     get_cup_config,
     get_cup_matches,
     get_cup_gw_data,
+    get_active_player_count,
 )
 from services.cup_logic import resolve_bracket, round_name
 
@@ -13,13 +15,26 @@ bp = Blueprint("cup", __name__, url_prefix="/cup")
 
 @bp.route("/")
 def index():
+    with get_connection() as conn:
+        season = get_current_season(conn)
+        player_count = get_active_player_count(conn)
+
+    num_rounds = math.ceil(math.log2(player_count)) if player_count >= 2 else 1
+    start_gw = 39 - num_rounds
+
     try:
         with get_connection() as conn:
-            season = get_current_season(conn)
             config = get_cup_config(conn, season)
 
             if not config:
-                return render_template("cup/bracket.html", season=season, config=None)
+                return render_template(
+                    "cup/bracket.html",
+                    season=season,
+                    config=None,
+                    player_count=player_count,
+                    num_rounds=num_rounds,
+                    start_gw=start_gw,
+                )
 
             raw_matches = get_cup_matches(conn, season)
             cup_gameweeks = list(range(config["start_gameweek"], 39))
@@ -29,7 +44,14 @@ def index():
         # Cup tables don't exist yet — treat as not configured
         import logging
         logging.getLogger(__name__).warning("Cup tables not available: %s", e)
-        return render_template("cup/bracket.html", season=None, config=None)
+        return render_template(
+            "cup/bracket.html",
+            season=season,
+            config=None,
+            player_count=player_count,
+            num_rounds=num_rounds,
+            start_gw=start_gw,
+        )
 
     # Determine which gameweeks are fully finished (all fixtures have results)
     finished_gameweeks = set()

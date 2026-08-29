@@ -131,9 +131,51 @@
 </div>
 
 {% if not config %}
-  <div class="panel p-4 text-center">
-    <p class="mb-1" style="color: var(--text-muted);">The cup competition hasn't been set up for this season yet.</p>
-    <p class="mb-0 small" style="color: var(--text-muted);">Run <code>generate_cup_bracket.py</code> to generate the bracket.</p>
+  {# How the cup works #}
+  <div class="panel p-3 mb-3">
+    <h2 class="section-header" style="font-size:1rem; margin-bottom:0.75rem;">How It Works</h2>
+    <ul class="mb-0" style="color:var(--text-muted); font-size:0.88rem; padding-left:1.2rem; line-height:1.8;">
+      <li>Single-elimination knockout — lose and you're out</li>
+      <li>Each round is played over one gameweek; highest points wins the match</li>
+      <li>Scoring is the same as the main league: <strong style="color:var(--white);">1 pt</strong> correct result, <strong style="color:var(--white);">1 pt</strong> exact score</li>
+      <li>Seedings are based on your final league position before the cup starts — top of the table gets seed 1</li>
+      <li>Tiebreak order: points → correct results → exact scores → goals variance → seeding</li>
+    </ul>
+  </div>
+
+  {# Calculated bracket preview #}
+  {% if player_count and player_count >= 2 %}
+  <div class="panel p-3 mb-3">
+    <h2 class="section-header" style="font-size:1rem; margin-bottom:0.75rem;">This Season</h2>
+    <div class="d-flex flex-wrap gap-3" style="font-size:0.88rem;">
+      <div>
+        <span style="color:var(--text-muted);">Players</span><br>
+        <strong style="font-size:1.3rem; font-family:'Barlow Condensed',sans-serif;">{{ player_count }}</strong>
+      </div>
+      <div style="color:var(--border); align-self:center;">|</div>
+      <div>
+        <span style="color:var(--text-muted);">Rounds</span><br>
+        <strong style="font-size:1.3rem; font-family:'Barlow Condensed',sans-serif;">{{ num_rounds }}</strong>
+      </div>
+      <div style="color:var(--border); align-self:center;">|</div>
+      <div>
+        <span style="color:var(--text-muted);">Cup starts</span><br>
+        <strong style="font-size:1.3rem; font-family:'Barlow Condensed',sans-serif;">GW{{ start_gw }}</strong>
+      </div>
+      <div style="color:var(--border); align-self:center;">|</div>
+      <div>
+        <span style="color:var(--text-muted);">Final</span><br>
+        <strong style="font-size:1.3rem; font-family:'Barlow Condensed',sans-serif;">GW38</strong>
+      </div>
+    </div>
+    <p class="mb-0 mt-3" style="color:var(--text-muted); font-size:0.82rem;">
+      The draw will be made after GW{{ start_gw - 1 }} results are in. Check back then for the full bracket.
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="panel p-3 text-center" style="color:var(--text-muted); font-size:0.85rem;">
+    Bracket not yet generated — check back closer to GW{{ start_gw }}.
   </div>
 {% else %}
 

@@ -428,8 +428,8 @@ def get_gameweek_predictions(conn, gameweek, season):
 
 
 def get_active_player_count(conn):
-    """Total number of active players."""
-    row = _fetchone(conn, "SELECT COUNT(*) AS cnt FROM players WHERE active = 1")
+    """Active, non-pundit players — the pool that enters the cup."""
+    row = _fetchone(conn, "SELECT COUNT(*) AS cnt FROM players WHERE active = 1 AND pundit = 0")
     return row["cnt"] if row else 0
 
 
