@@ -2,7 +2,9 @@ from flask import Blueprint, render_template, abort
 from services.database import (
     get_connection,
     get_current_season,
+    get_all_gameweeks,
     get_fixture_by_id,
+    get_gameweek_fixtures,
     get_fixture_predictions_detail,
     get_active_player_count,
     get_fixture_prediction_counts,
@@ -20,6 +22,8 @@ def detail(fixture_id):
             abort(404)
 
         season = get_current_season(conn)
+        all_gameweeks = sorted(get_all_gameweeks(conn), key=lambda r: r["gameweek"])
+        gw_fixtures = get_gameweek_fixtures(conn, fixture["gameweek"], season)
         raw_preds = get_fixture_predictions_detail(conn, fixture_id)
         active_count = get_active_player_count(conn)
         pred_counts = get_fixture_prediction_counts(conn, [fixture_id])
@@ -74,6 +78,8 @@ def detail(fixture_id):
         "fixture/detail.html",
         fixture=fixture,
         season=season,
+        all_gameweeks=all_gameweeks,
+        gw_fixtures=gw_fixtures,
         visible=visible,
         players_data=players_data,
         vote_counts=vote_counts,

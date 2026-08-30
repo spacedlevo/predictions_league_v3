@@ -207,18 +207,81 @@
   .result-H { background: rgba(96,165,250,0.18); color: #60a5fa; }
   .result-D { background: rgba(176,184,193,0.18); color: var(--silver); }
   .result-A { background: rgba(248,113,113,0.18); color: #f87171; }
+
+  /* ── Breadcrumb dropdowns ── */
+  .bc-dropdown-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .bc-dropdown-toggle:hover { color: var(--silver); }
+  .bc-dropdown-toggle::after { margin-left: 0.2rem; vertical-align: 0.1em; }
+  .bc-dropdown .dropdown-menu {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    padding: 0.25rem 0;
+    min-width: 160px;
+  }
+  .bc-dropdown .dropdown-item {
+    color: var(--silver);
+    font-size: 0.82rem;
+    padding: 0.3rem 0.85rem;
+  }
+  .bc-dropdown .dropdown-item:hover,
+  .bc-dropdown .dropdown-item:focus {
+    background: var(--navy-light);
+    color: var(--white);
+  }
+  .bc-dropdown .dropdown-item.active {
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- Breadcrumb -->
-<nav style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">
+<nav style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;display:flex;align-items:center;flex-wrap:wrap;gap:0.1rem;">
   <a href="/gameweek/" style="color:var(--text-muted);text-decoration:none;">Gameweeks</a>
   <span style="margin:0 0.4rem;">/</span>
-  <a href="/gameweek/{{ fixture.gameweek }}" style="color:var(--text-muted);text-decoration:none;">GW{{ fixture.gameweek }}</a>
+
+  <div class="dropdown bc-dropdown" style="display:inline-block;">
+    <button class="bc-dropdown-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      GW{{ fixture.gameweek }}
+    </button>
+    <ul class="dropdown-menu">
+      {% for g in all_gameweeks %}
+      <li>
+        <a class="dropdown-item {% if g.gameweek == fixture.gameweek %}active{% endif %}" href="/gameweek/{{ g.gameweek }}">
+          GW{{ g.gameweek }}{% if g.current_gameweek and not g.finished %} <span style="opacity:0.6;font-size:0.75em;">Live</span>{% elif g.next_gameweek %} <span style="opacity:0.6;font-size:0.75em;">Next</span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
   <span style="margin:0 0.4rem;">/</span>
-  <span style="color:var(--silver);">{{ fixture.home_team | title }} v {{ fixture.away_team | title }}</span>
+
+  <div class="dropdown bc-dropdown" style="display:inline-block;">
+    <button class="bc-dropdown-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="color:var(--silver);">
+      {{ fixture.home_team | title }} v {{ fixture.away_team | title }}
+    </button>
+    <ul class="dropdown-menu">
+      {% for f in gw_fixtures %}
+      <li>
+        <a class="dropdown-item {% if f.fixture_id == fixture.fixture_id %}active{% endif %}" href="/fixture/{{ f.fixture_id }}">
+          {{ f.home_team | title }} v {{ f.away_team | title }}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 </nav>
 
 <!-- Fixture hero -->
