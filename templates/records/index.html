@@ -5,15 +5,58 @@
 {% block content %}
 
 <div class="mb-4">
-  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">Season {{ season }}</p>
-  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0;line-height:1;">
-    Season <span style="color:var(--gold);">Records</span>
+  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin:0 0 0.2rem;">
+    {% if all_seasons %}All Time{% else %}{{ selected_season }}{% endif %}
+  </p>
+  <h1 style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin:0 0 1rem;line-height:1;">
+    {% if all_seasons %}All-Time{% else %}Season{% endif %} <span style="color:var(--gold);">Records</span>
   </h1>
+
+  <!-- Season selector -->
+  <div class="d-flex flex-wrap gap-2">
+    {% for s in seasons %}
+    <a href="/records/?season={{ s }}" class="season-pill{% if not all_seasons and selected_season == s %} season-pill-active{% endif %}">{{ s }}</a>
+    {% endfor %}
+    <a href="/records/?season=all" class="season-pill{% if all_seasons %} season-pill-active{% endif %}">All Seasons</a>
+  </div>
 </div>
+
+<style>
+  .season-pill {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    background: transparent;
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .season-pill:hover {
+    color: var(--white);
+    border-color: var(--gold-dim);
+    background: var(--navy-light);
+  }
+  .season-pill-active {
+    color: var(--navy);
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .season-pill-active:hover {
+    color: var(--navy);
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+</style>
 
 {% if not best_gw_score %}
 <div class="panel py-5 text-center" style="color:var(--text-muted);">
-  No completed gameweeks yet this season.
+  No completed gameweeks yet{% if selected_season %} this season{% endif %}.
 </div>
 {% else %}
 
@@ -28,7 +71,9 @@
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:3rem;line-height:1;color:var(--gold);">{{ best_gw_score.points }}</span>
           <span style="font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">pts</span>
           {% if best_gw_score.gameweek %}
-          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">— GW{{ best_gw_score.gameweek }}</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">
+            — GW{{ best_gw_score.gameweek }}{% if best_gw_score.gw_season %} <span style="opacity:0.7;">({{ best_gw_score.gw_season }})</span>{% endif %}
+          </span>
           {% endif %}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
@@ -53,7 +98,9 @@
           <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:3rem;line-height:1;color:#4ade80;">{{ best_gw_exact.exact_scores }}</span>
           <span style="font-size:0.85rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">exact</span>
           {% if best_gw_exact.gameweek %}
-          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">— GW{{ best_gw_exact.gameweek }}</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);margin-left:0.25rem;">
+            — GW{{ best_gw_exact.gameweek }}{% if best_gw_exact.gw_season %} <span style="opacity:0.7;">({{ best_gw_exact.gw_season }})</span>{% endif %}
+          </span>
           {% endif %}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
@@ -127,6 +174,9 @@
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.25rem;line-height:1;color:#e85d5d;">
             GW{{ hardest_gw.gameweek }}
           </div>
+          {% if hardest_gw.gw_season %}
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">{{ hardest_gw.gw_season }}</div>
+          {% endif %}
           <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">
             avg <span style="color:var(--white);font-weight:600;">{{ "%.1f"|format(hardest_gw.avg) }}</span> pts
           </div>
@@ -143,6 +193,9 @@
           <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.25rem;line-height:1;color:#4ade80;">
             GW{{ easiest_gw.gameweek }}
           </div>
+          {% if easiest_gw.gw_season %}
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">{{ easiest_gw.gw_season }}</div>
+          {% endif %}
           <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">
             avg <span style="color:var(--white);font-weight:600;">{{ "%.1f"|format(easiest_gw.avg) }}</span> pts
           </div>

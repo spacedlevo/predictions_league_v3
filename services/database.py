@@ -540,12 +540,23 @@ def get_fixture_prediction_counts(conn, fixture_ids):
     return {r["fixture_id"]: r["cnt"] for r in rows}
 
 
+def get_all_seasons(conn):
+    """Return seasons that have at least one prediction, in descending order."""
+    rows = _fetchall(conn, """
+        SELECT DISTINCT f.season
+        FROM fixtures f
+        JOIN predictions pred ON f.fixture_id = pred.fixture_id
+        ORDER BY f.season DESC
+    """)
+    return [r["season"] for r in rows]
+
+
 def get_season_gw_scores(conn, season):
-    """Per-player per-GW totals for a season, for finished GWs only (INNER JOIN results).
-    Returns all rows sorted by gameweek ASC, total_points DESC.
-    Used to derive records: best GW, most exact scores, GW wins, hardest/easiest GW."""
+    """Per-player per-GW totals for a season. Includes all players who participated,
+    regardless of current active status — records reflect who was actually playing."""
     return _fetchall(conn, """
         SELECT
+            f.season,
             f.gameweek,
             p.player_id,
             p.web_name,
@@ -558,11 +569,33 @@ def get_season_gw_scores(conn, season):
         JOIN predictions pred ON p.player_id = pred.player_id
         JOIN fixtures f ON pred.fixture_id = f.fixture_id
         JOIN results r ON f.fixture_id = r.fixture_id
-        JOIN gameweeks g ON f.gameweek = g.gameweek
-        WHERE p.active = 1 AND f.season = ? AND g.finished = 1
-        GROUP BY f.gameweek, p.player_id, p.web_name
+        WHERE p.pundit = 0 AND f.season = ?
+        GROUP BY f.season, f.gameweek, p.player_id, p.web_name
         ORDER BY f.gameweek ASC, total_points DESC, p.player_name ASC
     """, (season,))
+
+
+def get_all_seasons_gw_scores(conn):
+    """Like get_season_gw_scores but across all seasons. Includes season in each row."""
+    return _fetchall(conn, """
+        SELECT
+            f.season,
+            f.gameweek,
+            p.player_id,
+            p.web_name,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS exact_scores,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS total_points
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f ON pred.fixture_id = f.fixture_id
+        JOIN results r ON f.fixture_id = r.fixture_id
+        WHERE p.pundit = 0
+        GROUP BY f.season, f.gameweek, p.player_id, p.web_name
+        ORDER BY f.season ASC, f.gameweek ASC, total_points DESC, p.player_name ASC
+    """)
 
 
 def get_fixture_accuracy_counts(conn, fixture_ids):
@@ -701,6 +734,70 @@ def get_all_time_table(conn):
         GROUP BY p.player_id, p.player_name, p.web_name
         ORDER BY total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """)
+
+
+def get_all_league_players(conn):
+    """Active non-pundit players, ordered by name."""
+    return _fetchall(conn, """
+        SELECT player_id, player_name, web_name
+        FROM players
+        WHERE active = 1 AND pundit = 0
+        ORDER BY player_name ASC
+    """)
+
+
+def get_players_by_season(conn, min_predictions=10):
+    """Non-pundit players who submitted more than min_predictions in each season.
+
+    Returns one row per (season, player). Used to populate season-aware player
+    selection — only players who genuinely participated in a given season appear.
+    """
+    return _fetchall(conn, """
+        SELECT f.season, p.player_id, p.web_name
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f       ON pred.fixture_id = f.fixture_id
+        WHERE p.pundit = 0
+        GROUP BY f.season, p.player_id, p.web_name
+        HAVING COUNT(pred.prediction_id) > ?
+        ORDER BY f.season DESC, p.web_name ASC
+    """, (min_predictions,))
+
+
+def get_season_gw_ranges(conn):
+    """Seasons that have predictions, with their min and max gameweek numbers, newest first."""
+    return _fetchall(conn, """
+        SELECT f.season, MIN(f.gameweek) AS min_gw, MAX(f.gameweek) AS max_gw
+        FROM fixtures f
+        JOIN predictions pred ON f.fixture_id = pred.fixture_id
+        GROUP BY f.season
+        ORDER BY f.season DESC
+    """)
+
+
+def get_predictions_for_custom_league(conn, player_ids, season, gw_start, gw_end):
+    """All finished-fixture predictions for selected players in a season/GW range."""
+    placeholders = ",".join("?" * len(player_ids))
+    return _fetchall(conn, f"""
+        SELECT
+            p.player_id,
+            p.web_name,
+            pred.home_goals   AS pred_home,
+            pred.away_goals   AS pred_away,
+            pred.predicted_result,
+            r.home_goals      AS res_home,
+            r.away_goals      AS res_away,
+            r.result          AS res_result
+        FROM players p
+        JOIN predictions pred ON p.player_id = pred.player_id
+        JOIN fixtures f       ON pred.fixture_id = f.fixture_id
+        JOIN results r        ON f.fixture_id = r.fixture_id
+        WHERE p.player_id IN ({placeholders})
+          AND f.season = ?
+          AND f.gameweek BETWEEN ? AND ?
+          AND p.active = 1
+        ORDER BY p.player_name ASC
+    """, (*player_ids, season, gw_start, gw_end))
 
 
 def get_all_season_standings(conn, exclude_season):
