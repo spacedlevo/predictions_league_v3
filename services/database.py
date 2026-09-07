@@ -364,7 +364,8 @@ def get_all_gameweeks(conn):
 def get_gw_winners(conn, season):
     """Return the top scorer(s) for each finished gameweek in the season.
     Returns dict {gameweek: {"web_name", "player_id", "total_points", "is_tie"}}.
-    Ties are flagged but only the first player (alphabetically) is named.
+    Tiebreaker order: total_points > correct_results > correct_scores.
+    is_tie is True only when players cannot be separated after all three.
     """
     rows = _fetchall(conn, """
         SELECT
@@ -375,14 +376,16 @@ def get_gw_winners(conn, season):
             COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
             COUNT(CASE WHEN pred.home_goals = r.home_goals
                             AND pred.away_goals = r.away_goals THEN 1 END) AS total_points,
-            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results,
+            COUNT(CASE WHEN pred.home_goals = r.home_goals
+                            AND pred.away_goals = r.away_goals THEN 1 END) AS correct_scores
         FROM players p
         JOIN predictions pred ON p.player_id = pred.player_id
         JOIN fixtures f ON pred.fixture_id = f.fixture_id
         JOIN results r ON f.fixture_id = r.fixture_id
         WHERE p.active = 1 AND f.season = ?
         GROUP BY f.gameweek, p.player_id, p.web_name, p.player_name
-        ORDER BY f.gameweek ASC, total_points DESC, correct_results DESC, p.player_name ASC
+        ORDER BY f.gameweek ASC, total_points DESC, correct_results DESC, correct_scores DESC, p.player_name ASC
     """, (season,))
 
     winners = {}
@@ -393,10 +396,17 @@ def get_gw_winners(conn, season):
                 "web_name": row["web_name"],
                 "player_id": row["player_id"],
                 "total_points": row["total_points"],
+                "correct_results": row["correct_results"],
+                "correct_scores": row["correct_scores"],
                 "is_tie": False,
             }
-        elif not winners[gw]["is_tie"] and row["total_points"] == winners[gw]["total_points"]:
-            winners[gw]["is_tie"] = True
+        else:
+            w = winners[gw]
+            if (not w["is_tie"]
+                    and row["total_points"] == w["total_points"]
+                    and row["correct_results"] == w["correct_results"]
+                    and row["correct_scores"] == w["correct_scores"]):
+                w["is_tie"] = True
     return winners
 
 
@@ -560,6 +570,7 @@ def get_season_gw_scores(conn, season):
             f.gameweek,
             p.player_id,
             p.web_name,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results,
             COUNT(CASE WHEN pred.home_goals = r.home_goals
                             AND pred.away_goals = r.away_goals THEN 1 END) AS exact_scores,
             COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
@@ -571,7 +582,7 @@ def get_season_gw_scores(conn, season):
         JOIN results r ON f.fixture_id = r.fixture_id
         WHERE p.pundit = 0 AND f.season = ?
         GROUP BY f.season, f.gameweek, p.player_id, p.web_name
-        ORDER BY f.gameweek ASC, total_points DESC, p.player_name ASC
+        ORDER BY f.gameweek ASC, total_points DESC, correct_results DESC, exact_scores DESC, p.player_name ASC
     """, (season,))
 
 
@@ -583,6 +594,7 @@ def get_all_seasons_gw_scores(conn):
             f.gameweek,
             p.player_id,
             p.web_name,
+            COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) AS correct_results,
             COUNT(CASE WHEN pred.home_goals = r.home_goals
                             AND pred.away_goals = r.away_goals THEN 1 END) AS exact_scores,
             COUNT(CASE WHEN pred.predicted_result = r.result THEN 1 END) +
@@ -594,7 +606,7 @@ def get_all_seasons_gw_scores(conn):
         JOIN results r ON f.fixture_id = r.fixture_id
         WHERE p.pundit = 0
         GROUP BY f.season, f.gameweek, p.player_id, p.web_name
-        ORDER BY f.season ASC, f.gameweek ASC, total_points DESC, p.player_name ASC
+        ORDER BY f.season ASC, f.gameweek ASC, total_points DESC, correct_results DESC, exact_scores DESC, p.player_name ASC
     """)
 
 

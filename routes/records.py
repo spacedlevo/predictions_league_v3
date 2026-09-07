@@ -32,7 +32,12 @@ def _compute_records(rows, multi_season=False):
         top_pts = players[0]["total_points"]
         top_exact = max(p["exact_scores"] for p in players)
 
-        top_scorers = [p for p in players if p["total_points"] == top_pts]
+        # Apply tiebreaker chain: points > correct_results > exact_scores
+        candidates = [p for p in players if p["total_points"] == top_pts]
+        top_results = max(p["correct_results"] for p in candidates)
+        candidates = [p for p in candidates if p["correct_results"] == top_results]
+        top_winner_exact = max(p["exact_scores"] for p in candidates)
+        top_scorers = [p for p in candidates if p["exact_scores"] == top_winner_exact]
         if best_gw_score is None or top_pts > best_gw_score["points"]:
             best_gw_score = {
                 "players": top_scorers,
