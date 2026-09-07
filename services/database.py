@@ -807,7 +807,7 @@ def get_predictions_for_custom_league(conn, player_ids, season, gw_start, gw_end
         WHERE p.player_id IN ({placeholders})
           AND f.season = ?
           AND f.gameweek BETWEEN ? AND ?
-          AND p.active = 1
+          AND p.pundit = 0
         ORDER BY p.player_name ASC
     """, (*player_ids, season, gw_start, gw_end))
 
